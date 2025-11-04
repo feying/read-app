@@ -60,7 +60,8 @@ let deepSeekApiKey = null;
 let currentBookId = null;
 let activeDictionary = {};
 let currentPage = 0;
-const mockUserEmail = 'test@example.com';
+let currentUser = null;
+const API_BASE_URL = 'http://127.0.0.1:5000/api';
 
 // DOM 元素引用
 let contentDiv, userBtn, userModal, closeModalBtn, libraryBtn, libraryModal, closeLibraryModalBtn, libraryList;
@@ -163,8 +164,89 @@ function parseContent(targetDiv, contentHtml, isForPrint = false, pageWordCounte
     return wordCounter;
 }
 
+// 用户认证函数
+async function registerUser(email, password) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+        const data = await response.json();
+        return { success: response.ok, data };
+    } catch (error) {
+        console.error('注册失败:', error);
+        return { success: false, data: { error: '网络错误，请检查后端服务器是否运行' } };
+    }
+}
+
+async function loginUser(email, password) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+        const data = await response.json();
+        return { success: response.ok, data };
+    } catch (error) {
+        console.error('登录失败:', error);
+        return { success: false, data: { error: '网络错误，请检查后端服务器是否运行' } };
+    }
+}
+
+async function updateUserApiKey(userId, apiKey) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/user/api_key`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId, api_key: apiKey })
+        });
+        const data = await response.json();
+        return { success: response.ok, data };
+    } catch (error) {
+        console.error('更新API密钥失败:', error);
+        return { success: false, data: { error: '网络错误' } };
+    }
+}
+
+async function updateReadingProgress(userId, bookId, currentPage, readingProgress) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/user/progress`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                user_id: userId, 
+                book_id: bookId, 
+                current_page: currentPage,
+                reading_progress: readingProgress 
+            })
+        });
+        const data = await response.json();
+        return { success: response.ok, data };
+    } catch (error) {
+        console.error('更新阅读进度失败:', error);
+        return { success: false, data: { error: '网络错误' } };
+    }
+}
+
+async function getReadingProgress(userId) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/user/progress/${userId}`);
+        const data = await response.json();
+        return { success: response.ok, data };
+    } catch (error) {
+        console.error('获取阅读进度失败:', error);
+        return { success: false, data: { error: '网络错误' } };
+    }
+}
+
 // 进度管理函数
-function getProgressKey() { return `reading_progress_${mockUserEmail}_${currentBookId}`; }
+function getProgressKey() { 
+    return currentUser ? 
+        `reading_progress_${currentUser.email}_${currentBookId}` : 
+        `reading_progress_anonymous_${currentBookId}`;
+}
 
 function saveProgress() {
     if (!currentBookId) return;
@@ -186,14 +268,45 @@ function saveProgress() {
     });
     
     localStorage.setItem(getProgressKey(), JSON.stringify(fullProgress));
+    
+    // 如果用户已登录，同步到服务器
+    if (currentUser && currentBookId) {
+        updateReadingProgress(
+            currentUser.id, 
+            currentBookId, 
+            currentPage, 
+            JSON.stringify(fullProgress)
+        );
+    }
 }
 
 function loadProgress() {
     if (!currentBookId) return;
-    const savedProgress = JSON.parse(localStorage.getItem(getProgressKey()) || '{}');
+    
+    // 如果用户已登录，尝试从服务器加载进度
+    if (currentUser) {
+        getReadingProgress(currentUser.id).then(result => {
+            if (result.success && result.data.current_book_id === currentBookId) {
+                // 使用服务器进度
+                const serverProgress = JSON.parse(result.data.reading_progress || '{}');
+                applyProgress(serverProgress);
+                return;
+            }
+            // 如果服务器没有进度，使用本地进度
+            const savedProgress = JSON.parse(localStorage.getItem(getProgressKey()) || '{}');
+            applyProgress(savedProgress);
+        });
+    } else {
+        // 匿名用户使用本地进度
+        const savedProgress = JSON.parse(localStorage.getItem(getProgressKey()) || '{}');
+        applyProgress(savedProgress);
+    }
+}
+
+function applyProgress(progressData) {
     const wordsOnPage = document.querySelectorAll('.word');
     wordsOnPage.forEach(wordEl => {
-        const progressItem = savedProgress[wordEl.dataset.wordId];
+        const progressItem = progressData[wordEl.dataset.wordId];
         if (progressItem) {
             const wordContainer = wordEl.parentElement;
             if (!wordContainer.querySelector('.translation')) {
