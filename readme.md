@@ -1,168 +1,132 @@
-# 交互式英文阅读应用
+# 英文阅读应用
 
-一个基于Web的交互式英文阅读应用，支持AI翻译、用户管理和阅读进度同步。
+一个现代化的英文阅读应用，支持实时翻译和阅读进度管理。
 
 ## 项目结构
 
 ```
 reading-app/
-├── frontend/                    # 前端文件
-│   ├── index.html              # 主页面
-│   ├── css/
-│   │   └── styles.css          # 样式文件
-│   └── js/
-│       ├── main.js             # 主逻辑
-│       ├── utils.js            # 工具函数
-│       ├── app.js              # 应用配置
-│       ├── dictionary.js       # 词典功能
-│       └── library.js          # 书库管理
-├── backend/                    # 后端文件
-│   ├── app.py                 # Flask应用
-│   ├── requirements.txt       # Python依赖
-│   ├── .env                   # 环境配置
-│   └── instance/
-│       └── users.db           # 用户数据库
-└── README.md                  # 项目说明
+├── frontend/          # 前端文件
+│   ├── index.html    # 主页面
+│   ├── css/          # 样式文件
+│   │   └── styles.css
+│   └── js/           # JavaScript文件
+│       ├── main.js   # 主应用逻辑
+│       ├── app.js    # 应用初始化
+│       ├── dictionary.js  # 词典功能
+│       ├── library.js     # 图书馆功能
+│       └── utils.js       # 工具函数
+├── backend/          # 后端API服务
+│   ├── app.py       # Flask应用
+│   ├── requirements.txt  # Python依赖
+│   ├── .env         # 环境配置
+│   ├── instance/    # 数据库文件目录
+│   │   └── users.db # SQLite数据库
+│   └── venv/        # Python虚拟环境
+├── venv/            # 根目录虚拟环境（可选）
+└── README.md        # 项目说明
 ```
 
 ## 功能特性
 
-### 阅读功能
-- 交互式英文阅读体验
-- 单词点击翻译
-- AI智能段落总结
-- 分页阅读和翻页控制
-- 打印功能支持
-
-### 用户管理
-- 用户注册和登录
-- 密码加密存储
-- API密钥管理
-- 阅读进度同步
-- 多设备进度同步
-
-### 书库管理
-- 多本书籍管理
-- 阅读进度跟踪
-- 快速切换书籍
+- 📖 英文文章阅读
+- 🔍 实时单词翻译
+- 👤 用户注册登录
+- 💾 阅读进度同步
+- 📱 响应式设计
 
 ## 技术栈
 
 ### 前端
 - HTML5 + CSS3
 - Tailwind CSS
-- 原生JavaScript (ES6+)
-- 响应式设计
+- 原生 JavaScript ES6+
+- Fetch API
 
 ### 后端
 - Python 3.x
 - Flask Web框架
 - SQLAlchemy ORM
-- bcrypt密码加密
-- CORS跨域支持
+- SQLite数据库
+- JWT认证（可选）
 
-## 安装和运行
+## 快速开始
 
-### 环境要求
-- Python 3.8+
-- 现代浏览器（支持ES6）
-
-### 后端设置
-
-1. 创建虚拟环境：
+### 前端启动
 ```bash
+# 进入前端目录
+cd frontend
+
+# 启动HTTP服务器
+python -m http.server 8080
+# 或使用Node.js
+npx http-server -p 8080
+```
+
+### 后端启动
+```bash
+# 进入后端目录
 cd backend
-python -m venv venv
-```
 
-2. 激活虚拟环境：
-- Windows:
-```bash
+# 激活虚拟环境
+# Windows
 venv\Scripts\activate
-```
-- macOS/Linux:
-```bash
+# Linux/Mac
 source venv/bin/activate
+
+# 安装依赖
+pip install -r requirements.txt
+
+# 启动Flask应用
+python app.py
 ```
 
-3. 安装依赖：
+### 虚拟环境设置
 ```bash
+# 创建虚拟环境
+python -m venv venv
+
+# 激活虚拟环境
+# Windows
+venv\Scripts\activate
+# Linux/Mac
+source venv/bin/activate
+
+# 安装依赖
 pip install -r requirements.txt
 ```
 
-4. 运行后端服务：
-```bash
-python app.py
-```
-后端服务将在 http://127.0.0.1:5000 运行
-
-### 前端设置
-
-1. 直接在浏览器中打开 `frontend/index.html` 文件
-2. 或使用本地HTTP服务器：
-```bash
-cd frontend
-python -m http.server 8000
-```
-然后在浏览器中访问 http://localhost:8000
-
-## 配置说明
-
-### 环境变量 (.env)
-```
-SECRET_KEY=your-secret-key-here
-```
-
-### API配置
-- 需要在用户设置中配置DeepSeek API密钥
-- 支持AI翻译和段落总结功能
-
-## 数据库结构
-
-### User表
-- id: 主键
-- email: 用户邮箱（唯一）
-- password_hash: 密码哈希
-- api_key: DeepSeek API密钥
-- current_book_id: 当前阅读书籍ID
-- current_page: 当前页码
-- reading_progress: 阅读进度（JSON格式）
-
-## API接口
-
-### 用户认证
-- `POST /api/register` - 用户注册
-- `POST /api/login` - 用户登录
-
-### 用户管理
-- `PUT /api/user/api_key` - 更新API密钥
-- `PUT /api/user/progress` - 更新阅读进度
-- `GET /api/user/progress/<user_id>` - 获取阅读进度
-
-## 使用说明
-
-1. **首次使用**：注册新用户账户
-2. **配置API密钥**：在用户设置中添加DeepSeek API密钥
-3. **选择书籍**：从书库中选择要阅读的书籍
-4. **开始阅读**：点击单词查看翻译，点击段落按钮获取AI总结
-5. **进度保存**：阅读进度会自动保存到服务器
-
 ## 开发说明
 
-### 文件说明
+### 数据库配置
+项目默认使用SQLite数据库，数据文件位于 `backend/instance/users.db`
 
-- `frontend/js/main.js` - 主应用逻辑，包含事件处理和页面渲染
-- `frontend/js/utils.js` - 工具函数，包括API调用和内容解析
-- `frontend/js/app.js` - 应用配置和初始化
-- `frontend/js/dictionary.js` - 词典功能实现
-- `frontend/js/library.js` - 书库管理功能
-- `backend/app.py` - Flask后端API服务
+如需使用MySQL，请参考 `backend/DATABASE_SETUP.md`
 
-### 扩展开发
+### API接口
+- `POST /api/register` - 用户注册
+- `POST /api/login` - 用户登录
+- `POST /api/logout` - 用户退出
+- `GET /api/progress` - 获取阅读进度
+- `POST /api/progress` - 保存阅读进度
 
-- 添加新书籍：在书库配置中添加新书籍信息
-- 自定义样式：修改 `frontend/css/styles.css`
-- 扩展API：在 `backend/app.py` 中添加新的路由
+### 环境变量
+在 `backend/.env` 中配置：
+```
+DATABASE_URL=sqlite:///instance/users.db
+SECRET_KEY=your-secret-key
+```
+
+## 部署说明
+
+### 生产环境部署
+1. 配置生产数据库（MySQL/PostgreSQL）
+2. 设置环境变量
+3. 使用Gunicorn或uWSGI部署Flask应用
+4. 配置Nginx反向代理
+
+### 前端部署
+前端为静态文件，可部署到任何静态文件服务器或CDN。
 
 ## 许可证
 

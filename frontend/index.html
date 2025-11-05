@@ -81,6 +81,62 @@
         </div>
     </div>
 
+    <!-- Login Modal -->
+    <div id="login-modal" class="fixed inset-0 bg-gray-900 bg-opacity-60 items-center justify-center hidden z-50 p-4">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md relative mx-auto mt-16">
+            <button id="close-login-modal-btn" class="absolute top-3 right-3 text-gray-500 hover:text-gray-800 transition-transform duration-200 hover:rotate-90">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+            <h3 class="text-xl font-bold mb-4 text-gray-800">用户登录</h3>
+            <form id="login-form">
+                <div class="mb-4">
+                    <label for="login-email" class="block text-sm font-medium text-gray-700 mb-1">邮箱地址</label>
+                    <input type="email" id="login-email" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500" placeholder="请输入邮箱" required>
+                </div>
+                <div class="mb-4">
+                    <label for="login-password" class="block text-sm font-medium text-gray-700 mb-1">密码</label>
+                    <input type="password" id="login-password" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500" placeholder="请输入密码" required>
+                </div>
+                <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-md text-sm hover:bg-blue-700 transition-colors">登录</button>
+                <p class="text-center text-sm text-gray-600 mt-4">
+                    还没有账号？ 
+                    <button type="button" id="show-register-btn" class="text-blue-600 hover:underline">立即注册</button>
+                </p>
+            </form>
+            <p id="login-error" class="text-red-500 text-xs mt-2 h-4 text-center"></p>
+        </div>
+    </div>
+
+    <!-- Register Modal -->
+    <div id="register-modal" class="fixed inset-0 bg-gray-900 bg-opacity-60 items-center justify-center hidden z-50 p-4">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md relative mx-auto mt-16">
+            <button id="close-register-modal-btn" class="absolute top-3 right-3 text-gray-500 hover:text-gray-800 transition-transform duration-200 hover:rotate-90">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+            <h3 class="text-xl font-bold mb-4 text-gray-800">用户注册</h3>
+            <form id="register-form">
+                <div class="mb-4">
+                    <label for="register-email" class="block text-sm font-medium text-gray-700 mb-1">邮箱地址</label>
+                    <input type="email" id="register-email" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500" placeholder="请输入邮箱" required>
+                </div>
+                <div class="mb-4">
+                    <label for="register-password" class="block text-sm font-medium text-gray-700 mb-1">密码</label>
+                    <input type="password" id="register-password" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500" placeholder="请输入密码（至少6位）" minlength="6" required>
+                </div>
+                <div class="mb-4">
+                    <label for="confirm-password" class="block text-sm font-medium text-gray-700 mb-1">确认密码</label>
+                    <input type="password" id="confirm-password" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500" placeholder="请再次输入密码" minlength="6" required>
+                </div>
+                <button type="submit" class="w-full bg-green-600 text-white py-2 rounded-md text-sm hover:bg-green-700 transition-colors">注册</button>
+                <p class="text-center text-sm text-gray-600 mt-4">
+                    已有账号？ 
+                    <button type="button" id="show-login-btn" class="text-blue-600 hover:underline">立即登录</button>
+                </p>
+            </form>
+            <p id="register-error" class="text-red-500 text-xs mt-2 h-4 text-center"></p>
+        </div>
+    </div>
+
     <!-- A4页面容器 -->
     <div id="main-container" class="flex flex-col items-center">
         <div id="page-container" class="page bg-white shadow-lg p-16 text-xs leading-snug">

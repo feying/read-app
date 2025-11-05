@@ -69,6 +69,11 @@ let apiKeyInput, saveKeyBtn, saveStatusEl, logoutBtn, paginationControls, printB
 let closePrintModalBtn, confirmPrintBtn, clearProgressBtn, aiModal, closeAiModalBtn, aiModalTitle;
 let aiModalLoader, aiResponseEl;
 
+// 登录/注册相关元素
+let loginModal, closeLoginModalBtn, loginForm, loginEmail, loginPassword, loginError;
+let registerModal, closeRegisterModalBtn, registerForm, registerEmail, registerPassword, confirmPassword, registerError;
+let showRegisterBtn, showLoginBtn;
+
 // DeepSeek API 调用函数
 async function callDeepSeekAPI(prompt) {
     if (!deepSeekApiKey) {
@@ -543,6 +548,128 @@ function setupEventListeners() {
         });
         
         window.print();
+    });
+
+    // 登录/注册模态框事件处理
+    // 获取登录/注册相关元素
+    loginModal = document.getElementById('login-modal');
+    registerModal = document.getElementById('register-modal');
+    closeLoginModalBtn = document.getElementById('close-login-modal-btn');
+    closeRegisterModalBtn = document.getElementById('close-register-modal-btn');
+    loginForm = document.getElementById('login-form');
+    registerForm = document.getElementById('register-form');
+    loginEmail = document.getElementById('login-email');
+    loginPassword = document.getElementById('login-password');
+    loginError = document.getElementById('login-error');
+    registerEmail = document.getElementById('register-email');
+    registerPassword = document.getElementById('register-password');
+    confirmPassword = document.getElementById('confirm-password');
+    registerError = document.getElementById('register-error');
+    showRegisterBtn = document.getElementById('show-register-btn');
+    showLoginBtn = document.getElementById('show-login-btn');
+
+    // 登录/注册模态框切换
+    showRegisterBtn.addEventListener('click', () => {
+        loginModal.classList.add('hidden');
+        registerModal.classList.remove('hidden');
+    });
+
+    showLoginBtn.addEventListener('click', () => {
+        registerModal.classList.add('hidden');
+        loginModal.classList.remove('hidden');
+    });
+
+    // 关闭登录/注册模态框
+    closeLoginModalBtn.addEventListener('click', () => loginModal.classList.add('hidden'));
+    closeRegisterModalBtn.addEventListener('click', () => registerModal.classList.add('hidden'));
+
+    // 模态框外部点击关闭
+    loginModal.addEventListener('click', e => e.target === loginModal && loginModal.classList.add('hidden'));
+    registerModal.addEventListener('click', e => e.target === registerModal && registerModal.classList.add('hidden'));
+
+    // 登录表单提交
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = loginEmail.value.trim();
+        const password = loginPassword.value;
+
+        if (!email || !password) {
+            loginError.textContent = '请输入邮箱和密码';
+            return;
+        }
+
+        loginError.textContent = '';
+        const result = await loginUser(email, password);
+
+        if (result.success) {
+            currentUser = result.data.user;
+            document.getElementById('user-email-display').textContent = currentUser.email;
+            loginModal.classList.add('hidden');
+            saveStatusEl.textContent = '登录成功！';
+            setTimeout(() => saveStatusEl.textContent = '', 2000);
+            
+            // 登录后加载用户的阅读进度
+            if (currentBookId) {
+                loadProgress();
+            }
+        } else {
+            loginError.textContent = result.data.error || '登录失败';
+        }
+    });
+
+    // 注册表单提交
+    registerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = registerEmail.value.trim();
+        const password = registerPassword.value;
+        const confirm = confirmPassword.value;
+
+        if (!email || !password) {
+            registerError.textContent = '请输入邮箱和密码';
+            return;
+        }
+
+        if (password !== confirm) {
+            registerError.textContent = '密码不匹配';
+            return;
+        }
+
+        if (password.length < 6) {
+            registerError.textContent = '密码长度至少6位';
+            return;
+        }
+
+        registerError.textContent = '';
+        const result = await registerUser(email, password);
+
+        if (result.success) {
+            currentUser = result.data.user;
+            document.getElementById('user-email-display').textContent = currentUser.email;
+            registerModal.classList.add('hidden');
+            saveStatusEl.textContent = '注册成功！';
+            setTimeout(() => saveStatusEl.textContent = '', 2000);
+        } else {
+            registerError.textContent = result.data.error || '注册失败';
+        }
+    });
+
+    // 用户按钮点击显示登录模态框
+    userBtn.addEventListener('click', () => {
+        if (!currentUser) {
+            loginModal.classList.remove('hidden');
+        } else {
+            userModal.classList.remove('hidden');
+        }
+    });
+
+    // 退出登录功能
+    logoutBtn.addEventListener('click', () => {
+        currentUser = null;
+        localStorage.clear();
+        document.getElementById('user-email-display').textContent = "未登录";
+        userModal.classList.add('hidden');
+        saveStatusEl.textContent = '已退出登录，页面将刷新。';
+        setTimeout(() => window.location.reload(), 1500);
     });
 
     // AI 模态框
