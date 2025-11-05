@@ -164,11 +164,11 @@
     <!-- Print Container -->
     <div id="print-container" class="hidden"></div>
 
-    <!-- 引入JavaScript -->
-    <script src="js/main.js"></script>
-    <script src="js/utils.js"></script>
-    <script src="js/app.js"></script>
-    <script src="js/dictionary.js"></script>
-    <script src="js/library.js"></script>
+    <!-- 
+      修改点：
+      1. 将 main.js 标记为 type="module"
+      2. 移除了其他被注释掉的脚本，因为它们现在由 main.js 导入
+    -->
+    <script type="module" src="js/main.js"></script>
 </body>
 </html>
