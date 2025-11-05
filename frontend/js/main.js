@@ -637,7 +637,7 @@ function initialize() {
     aiResponseEl = document.getElementById('ai-response');
 
     // 初始化用户信息
-    document.getElementById('user-email-display').textContent = mockUserEmail;
+    document.getElementById('user-email-display').textContent = currentUser ? currentUser.email : "未登录";
     const savedApiKey = localStorage.getItem('deepseek_api_key');
     deepSeekApiKey = savedApiKey || null;
     apiKeyInput.value = savedApiKey || '';
