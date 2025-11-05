@@ -9,7 +9,14 @@ load_dotenv()
 
 app = Flask(__name__)
 # 数据库配置
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///instance/app.db')
+# 确保实例目录存在
+instance_dir = os.path.join(os.path.dirname(__file__), 'instance')
+if not os.path.exists(instance_dir):
+    os.makedirs(instance_dir)
+
+# 使用绝对路径确保SQLite正常工作
+db_path = os.path.abspath(os.path.join(instance_dir, 'users.db'))
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')
 
