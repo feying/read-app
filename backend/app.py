@@ -8,20 +8,27 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-# 数据库配置
-# 确保实例目录存在
-instance_dir = os.path.join(os.path.dirname(__file__), 'instance')
-if not os.path.exists(instance_dir):
-    os.makedirs(instance_dir)
 
-# 使用绝对路径确保SQLite正常工作
-db_path = os.path.abspath(os.path.join(instance_dir, 'users.db'))
-app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+# --- 数据库配置 (只使用 MySQL) ---
+# 1. 从 .env 文件加载数据库连接字符串
+db_url = os.getenv('DATABASE_URL')
+
+# 2. 检查配置是否存在
+if not db_url:
+    print("--- 错误：未在 .env 文件中找到 DATABASE_URL 配置。---")
+    print("--- 请确保 .env 文件在 backend 目录下，并包含 DATABASE_URL。 ---")
+    exit() # 停止应用，因为没有数据库无法运行
+
+# 3. 配置 Flask
+app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')
+print(f"--- 正在尝试连接到数据库: {db_url.split('@')[-1]} ---") # 打印数据库地址 (隐藏密码)
+# --- 数据库配置结束 ---
 
 db = SQLAlchemy(app)
-CORS(app)
+# 明确允许来自你前端源的请求
+CORS(app, resources={r"/api/*": {"origins": ["http://localhost:8080", "http://127.0.0.1:8080"]}})
 
 # 用户模型
 class User(db.Model):
@@ -40,6 +47,7 @@ class User(db.Model):
         return bcrypt.checkpw(password.encode('utf-8'), self.password_hash.encode('utf-8'))
 
 # 创建数据库表
+# 这会检查 MySQL 数据库，如果 "user" 表不存在，它会自动创建。
 with app.app_context():
     db.create_all()
 
