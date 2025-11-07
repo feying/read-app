@@ -471,7 +471,8 @@ function setupEventListeners() {
             if (event.detail === 2) { // 双击
                 const originalText = translationSpan.textContent;
                 translationSpan.textContent = '...';
-                const translationText = await callDeepSeekAPI(`请根据上下文，将单词 "${wordText}" 翻译成最合适的中文。只返回翻译结果。\n\n上下文: "${context}"`);
+                // --- 修改点：将 deepSeekApiKey 传递进去 ---
+                const translationText = await callDeepSeekAPI(`请根据上下文，将单词 "${wordText}" 翻译成最合适的中文。只返回翻译结果。\n\n上下文: "${context}"`, deepSeekApiKey);
                 if (translationText.includes('错误')) {
                     translationSpan.textContent = originalText;
                 } else {
@@ -482,7 +483,8 @@ function setupEventListeners() {
             } else if (event.detail === 3) { // 三击
                 aiModalTitle.textContent = `✨ AI 深度解析: "${wordText}"`;
                 showAiModal();
-                const response = await callDeepSeekAPI(`请用中文，在一个段落内，为学生解释技术术语 "${wordText}"。请结合上下文解释：\n\n上下文："${context}"`);
+                // --- 修改点：将 deepSeekApiKey 传递进去 ---
+                const response = await callDeepSeekAPI(`请用中文，在一个段落内，为学生解释技术术语 "${wordText}"。请结合上下文解释：\n\n上下文："${context}"`, deepSeekApiKey);
                 aiModalLoader.style.display = 'none';
                 aiResponseEl.textContent = response;
             }
@@ -494,7 +496,8 @@ function setupEventListeners() {
              if (paragraphText) {
                 aiModalTitle.textContent = '✨ AI 段落总结';
                 showAiModal();
-                const response = await callDeepSeekAPI(`请用中文，将以下段落总结为几个关键点：\n\n段落："${paragraphText}"`);
+                // --- 修改点：将 deepSeekApiKey 传递进去 ---
+                const response = await callDeepSeekAPI(`请用中文，将以下段落总结为几个关键点：\n\n段落："${paragraphText}"`, deepSeekApiKey);
                 aiModalLoader.style.display = 'none';
                 aiResponseEl.textContent = response;
              }

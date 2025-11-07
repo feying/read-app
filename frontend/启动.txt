@@ -1,0 +1,8 @@
+cd到前端文件夹：
+python -m http.server 8080
+
+
+cd到后端文件夹：
+激活虚拟环境
+venv\Scripts\activate
+启动后端python app.py
