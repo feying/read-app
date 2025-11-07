@@ -1,13 +1,13 @@
 // --- 导入所有模块 ---
-import { dictionaries } from './dictionary.js';
-import { libraryData } from './library.js';
 import { callDeepSeekAPI, parsePageRange, parseContent } from './utils.js';
 import { 
     registerUser, 
     loginUser, 
     updateUserApiKey, 
     updateReadingProgress, 
-    getReadingProgress 
+    getReadingProgress,
+    getLibrary,
+    getDictionaries
 } from './api.js';
 
 // --- 全局状态 ---
@@ -17,6 +17,9 @@ let activeDictionary = {};
 let currentPage = 0;
 let currentUser = null;
 
+let allDictionaries = {};
+let allLibraryData = {};
+
 // --- DOM 元素引用 ---
 let contentDiv, userBtn, userModal, closeModalBtn, libraryBtn, libraryModal, closeLibraryModalBtn, libraryList;
 let apiKeyInput, saveKeyBtn, saveStatusEl, logoutBtn, paginationControls, printBtn, printModal;
@@ -25,8 +28,10 @@ let aiModalLoader, aiResponseEl;
 let loginModal, closeLoginModalBtn, loginForm, loginEmail, loginPassword, loginError;
 let registerModal, closeRegisterModalBtn, registerForm, registerEmail, registerPassword, confirmPassword, registerError;
 let showRegisterBtn, showLoginBtn;
+let mainContainer; // 新增：主内容容器引用
 
 // --- 进度管理 ---
+// (这部分函数 getProgressKey, saveProgress, loadProgress, applyProgress 保持不变)
 function getProgressKey() { 
     return currentUser ? 
         `reading_progress_${currentUser.email}_${currentBookId}` : 
@@ -54,7 +59,6 @@ function saveProgress() {
     
     localStorage.setItem(getProgressKey(), JSON.stringify(fullProgress));
     
-    // 如果用户已登录，同步到服务器
     if (currentUser && currentBookId) {
         updateReadingProgress(
             currentUser.id, 
@@ -68,21 +72,17 @@ function saveProgress() {
 function loadProgress() {
     if (!currentBookId) return;
     
-    // 如果用户已登录，尝试从服务器加载进度
     if (currentUser) {
         getReadingProgress(currentUser.id).then(result => {
             if (result.success && result.data.current_book_id === currentBookId) {
-                // 使用服务器进度
                 const serverProgress = JSON.parse(result.data.reading_progress || '{}');
                 applyProgress(serverProgress);
                 return;
             }
-            // 如果服务器没有进度，使用本地进度
             const savedProgress = JSON.parse(localStorage.getItem(getProgressKey()) || '{}');
             applyProgress(savedProgress);
         });
     } else {
-        // 匿名用户使用本地进度
         const savedProgress = JSON.parse(localStorage.getItem(getProgressKey()) || '{}');
         applyProgress(savedProgress);
     }
@@ -105,11 +105,12 @@ function applyProgress(progressData) {
     });
 }
 
-// --- 页面和书库逻辑 ---
 
+// --- 页面和书库逻辑 ---
+// (这部分函数 renderPaginationControls, loadPage, populateLibraryModal, loadBook 保持不变)
 function renderPaginationControls() {
     paginationControls.innerHTML = '';
-    const book = libraryData[currentBookId];
+    const book = allLibraryData[currentBookId]; 
     if (!book || book.content.length <= 1) return;
 
     const prevButton = document.createElement('button');
@@ -132,8 +133,8 @@ function renderPaginationControls() {
 }
 
 function loadPage(pageNumber) {
-    const book = libraryData[currentBookId];
-    if (pageNumber < 0 || pageNumber >= book.content.length) return;
+    const book = allLibraryData[currentBookId]; 
+    if (!book || pageNumber < 0 || pageNumber >= book.content.length) return;
     
     currentPage = pageNumber;
     localStorage.setItem(`lastReadPage_${currentBookId}`, currentPage);
@@ -152,8 +153,8 @@ function loadPage(pageNumber) {
 
 function populateLibraryModal() {
     libraryList.innerHTML = '';
-    for (const bookId in libraryData) {
-        const book = libraryData[bookId];
+    for (const bookId in allLibraryData) { 
+        const book = allLibraryData[bookId]; 
         const itemContainer = document.createElement('div');
         itemContainer.className = 'p-4 border rounded-md flex justify-between items-center';
         const bookInfo = document.createElement('div');
@@ -163,10 +164,10 @@ function populateLibraryModal() {
         const dictSelect = document.createElement('select');
         dictSelect.className = 'border border-gray-300 rounded-md px-2 py-1 text-xs';
         dictSelect.id = `dict-select-${bookId}`;
-        for (const dictId in dictionaries) {
+        for (const dictId in allDictionaries) { 
             const option = document.createElement('option');
             option.value = dictId;
-            option.textContent = dictionaries[dictId].name;
+            option.textContent = allDictionaries[dictId].name; 
             dictSelect.appendChild(option);
         }
         const savedDictId = localStorage.getItem(`selected_dictionary_for_${bookId}`) || book.defaultDictionaryId;
@@ -187,11 +188,11 @@ function populateLibraryModal() {
 }
 
 function loadBook(bookId, dictionaryId) {
-    if (!libraryData[bookId] || !dictionaries[dictionaryId]) return;
+    if (!allLibraryData[bookId] || !allDictionaries[dictionaryId]) return; 
     
     currentBookId = bookId;
-    const book = libraryData[bookId];
-    activeDictionary = dictionaries[dictionaryId].data;
+    const book = allLibraryData[bookId]; 
+    activeDictionary = allDictionaries[dictionaryId].data; 
     document.title = book.title;
 
     const lastPage = parseInt(localStorage.getItem(`lastReadPage_${currentBookId}`) || '0');
@@ -203,7 +204,7 @@ function loadBook(bookId, dictionaryId) {
 }
 
 // --- UI 辅助函数 ---
-
+// (updateSummarizeButtonsVisibility 和 showAiModal 保持不变)
 function updateSummarizeButtonsVisibility() {
     const summarizeContainers = document.querySelectorAll('.summarize-btn-container');
     summarizeContainers.forEach(c => c.style.display = deepSeekApiKey ? 'block' : 'none');
@@ -215,14 +216,18 @@ function showAiModal() {
     aiModalLoader.style.display = 'flex'; 
 }
 
-// --- 事件监听设置 ---
 
+// --- 事件监听设置 ---
 function setupEventListeners() {
     // 模态框按钮
     [userBtn, libraryBtn, printBtn].forEach(btn => btn.addEventListener('click', () => {
+        // 修改：用户按钮现在总是打开用户资料模态框（如果已登录）
+        // 登录逻辑现在由 initialize 函数处理
         const modalId = btn.id.replace('-btn', '-modal');
         const modal = document.getElementById(modalId);
+        
         if (modalId === 'user-modal' && !currentUser) {
+             // 如果因为某种原因用户未登录，但点击了用户按钮，则显示登录框
             loginModal.classList.remove('hidden');
         } else if (modal) {
             modal.classList.remove('hidden');
@@ -230,7 +235,8 @@ function setupEventListeners() {
     }));
 
     // 关闭按钮
-    [closeModalBtn, closeLibraryModalBtn, closePrintModalBtn, closeLoginModalBtn, closeRegisterModalBtn, closeAiModalBtn].forEach(btn => {
+    // 修改：移除了 login 和 register 模态框的关闭按钮引用，因为它们在 HTML 中被注释掉了
+    [closeModalBtn, closeLibraryModalBtn, closePrintModalBtn, closeAiModalBtn].forEach(btn => {
         if (btn) {
             btn.addEventListener('click', () => {
                 btn.closest('.fixed').classList.add('hidden');
@@ -239,7 +245,8 @@ function setupEventListeners() {
     });
 
     // 模态框外部点击关闭
-    [userModal, libraryModal, printModal, loginModal, registerModal, aiModal].forEach(modal => {
+    // 修改：移除了 login 和 register 模态框的外部点击关闭，强制用户交互
+    [userModal, libraryModal, printModal, aiModal].forEach(modal => {
         if (modal) {
             modal.addEventListener('click', e => {
                 if(e.target === modal) modal.classList.add('hidden');
@@ -271,8 +278,7 @@ function setupEventListeners() {
     logoutBtn.addEventListener('click', () => {
         currentUser = null;
         localStorage.clear();
-        document.getElementById('user-email-display').textContent = "未登录";
-        userModal.classList.add('hidden');
+        // 修改：退出登录后重新加载页面，将返回登录界面
         saveStatusEl.textContent = '已退出登录，页面将刷新。';
         setTimeout(() => window.location.reload(), 1500);
     });
@@ -293,12 +299,13 @@ function setupEventListeners() {
         }, 2000);
     });
 
+
     // 打印确认
     confirmPrintBtn.addEventListener('click', () => {
         const printContainer = document.getElementById('print-container');
         printContainer.innerHTML = ''; 
         
-        const book = libraryData[currentBookId];
+        const book = allLibraryData[currentBookId]; 
         if (!book) return;
 
         const rangeStr = document.getElementById('print-range-input').value;
@@ -364,6 +371,7 @@ function setupEventListeners() {
     });
 
     // 登录表单提交
+    // 修改：变为 async 函数，以便在登录后 await 数据加载
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const email = loginEmail.value.trim();
@@ -374,68 +382,68 @@ function setupEventListeners() {
             return;
         }
 
-        loginError.textContent = '';
+        loginError.textContent = '正在登录...'; // 修改：提供加载中提示
         const result = await loginUser(email, password);
 
         if (result.success) {
             currentUser = result.data.user;
             document.getElementById('user-email-display').textContent = currentUser.email;
-            loginModal.classList.add('hidden');
-            saveStatusEl.textContent = '登录成功！';
             
-            // 检查用户的 API Key
             if (currentUser.api_key) {
                 localStorage.setItem('deepseek_api_key', currentUser.api_key);
                 deepSeekApiKey = currentUser.api_key;
                 apiKeyInput.value = currentUser.api_key;
-                updateSummarizeButtonsVisibility();
             }
             
-            setTimeout(() => saveStatusEl.textContent = '', 2000);
+            loginError.textContent = '登录成功！正在加载数据...';
             
-            // 登录后加载用户的阅读进度
-            if (currentBookId) {
-                loadPage(currentPage); // 重新加载当前页面以应用服务器进度
-            }
+            // --- 修改：调用新函数来加载数据和显示应用 ---
+            await loadDataAndShowApp(); 
+            
+            loginModal.classList.add('hidden'); // 最后隐藏模态框
         } else {
             loginError.textContent = result.data.error || '登录失败';
         }
     });
 
     // 注册表单提交
+    // 修改：变为 async 函数
     registerForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const email = registerEmail.value.trim();
         const password = registerPassword.value;
         const confirm = confirmPassword.value;
 
-        if (!email || !password) {
-            registerError.textContent = '请输入邮箱和密码';
+        if (!email || !password || !confirm) {
+            registerError.textContent = '请填写所有字段';
             return;
         }
-
         if (password !== confirm) {
             registerError.textContent = '密码不匹配';
             return;
         }
-
         if (password.length < 6) {
             registerError.textContent = '密码长度至少6位';
             return;
         }
 
-        registerError.textContent = '';
+        registerError.textContent = '正在注册...';
         const result = await registerUser(email, password);
 
         if (result.success) {
             // 注册成功后自动登录
+            registerError.textContent = '注册成功！正在登录...';
             const loginResult = await loginUser(email, password);
             if (loginResult.success) {
                 currentUser = loginResult.data.user;
                 document.getElementById('user-email-display').textContent = currentUser.email;
-                registerModal.classList.add('hidden');
-                saveStatusEl.textContent = '注册并登录成功！';
-                setTimeout(() => saveStatusEl.textContent = '', 2000);
+                
+                // --- 修改：调用新函数来加载数据和显示应用 ---
+                await loadDataAndShowApp();
+                
+                registerModal.classList.add('hidden'); // 最后隐藏模态框
+            } else {
+                registerError.textContent = '注册成功，但自动登录失败。请返回登录。';
             }
         } else {
             registerError.textContent = result.data.error || '注册失败';
@@ -443,6 +451,7 @@ function setupEventListeners() {
     });
 
     // --- 内容交互事件 ---
+    // (这部分保持不变)
     contentDiv.addEventListener('click', async (event) => {
         const target = event.target;
         if (target.classList.contains('word')) {
@@ -471,7 +480,6 @@ function setupEventListeners() {
             if (event.detail === 2) { // 双击
                 const originalText = translationSpan.textContent;
                 translationSpan.textContent = '...';
-                // --- 修改点：将 deepSeekApiKey 传递进去 ---
                 const translationText = await callDeepSeekAPI(`请根据上下文，将单词 "${wordText}" 翻译成最合适的中文。只返回翻译结果。\n\n上下文: "${context}"`, deepSeekApiKey);
                 if (translationText.includes('错误')) {
                     translationSpan.textContent = originalText;
@@ -483,7 +491,6 @@ function setupEventListeners() {
             } else if (event.detail === 3) { // 三击
                 aiModalTitle.textContent = `✨ AI 深度解析: "${wordText}"`;
                 showAiModal();
-                // --- 修改点：将 deepSeekApiKey 传递进去 ---
                 const response = await callDeepSeekAPI(`请用中文，在一个段落内，为学生解释技术术语 "${wordText}"。请结合上下文解释：\n\n上下文："${context}"`, deepSeekApiKey);
                 aiModalLoader.style.display = 'none';
                 aiResponseEl.textContent = response;
@@ -496,7 +503,6 @@ function setupEventListeners() {
              if (paragraphText) {
                 aiModalTitle.textContent = '✨ AI 段落总结';
                 showAiModal();
-                // --- 修改点：将 deepSeekApiKey 传递进去 ---
                 const response = await callDeepSeekAPI(`请用中文，将以下段落总结为几个关键点：\n\n段落："${paragraphText}"`, deepSeekApiKey);
                 aiModalLoader.style.display = 'none';
                 aiResponseEl.textContent = response;
@@ -505,9 +511,47 @@ function setupEventListeners() {
     });
 }
 
-// --- 应用初始化 ---
+// --- 新增：登录成功后加载数据和显示应用的函数 ---
+async function loadDataAndShowApp() {
+    try {
+        // 并行获取书库和词典数据
+        [allDictionaries, allLibraryData] = await Promise.all([
+            getDictionaries(),
+            getLibrary()
+        ]);
+    } catch (error) {
+        console.error("应用数据加载失败:", error);
+        contentDiv.innerHTML = `<div class="text-red-500 p-4 border border-red-300 rounded-md">
+            <strong>数据加载失败</strong>
+            <p>无法从后端服务器获取书库和词D典数据。</p>
+            <p>请确保后端服务 (python app.py) 正在运行，并且数据库连接正确。</p>
+        </div>`;
+        mainContainer.classList.remove('hidden'); // 即使失败也要显示错误信息
+        return;
+    }
+    
+    // --- 数据加载成功后 ---
+    populateLibraryModal();
+    updateSummarizeButtonsVisibility(); // 确保 AI 按钮可见性被设置
+
+    // 加载最后一本书
+    const lastReadBookId = localStorage.getItem('lastReadBookId') || Object.keys(allLibraryData)[0];
+    if (lastReadBookId && allLibraryData[lastReadBookId]) {
+        const lastUsedDictId = localStorage.getItem(`selected_dictionary_for_${lastReadBookId}`) || allLibraryData[lastReadBookId].defaultDictionaryId;
+        loadBook(lastReadBookId, lastUsedDictId);
+    } else {
+        console.warn("书库为空或找不到上一本书，请从书库选择。");
+        // 如果没有书，显示书库模态框
+        libraryModal.classList.remove('hidden');
+    }
+    
+    // --- 最后：显示主应用内容 ---
+    mainContainer.classList.remove('hidden');
+}
+
+// --- 应用初始化 (已重构) ---
 function initialize() {
-    // 获取DOM元素引用
+    // 1. 获取所有 DOM 元素引用
     contentDiv = document.getElementById('content');
     userBtn = document.getElementById('user-btn');
     userModal = document.getElementById('user-modal');
@@ -531,12 +575,11 @@ function initialize() {
     aiModalTitle = document.getElementById('modal-title');
     aiModalLoader = document.getElementById('modal-loader');
     aiResponseEl = document.getElementById('ai-response');
+    mainContainer = document.getElementById('main-container');
 
-    // 登录/注册相关元素
     loginModal = document.getElementById('login-modal');
     registerModal = document.getElementById('register-modal');
-    closeLoginModalBtn = document.getElementById('close-login-modal-btn');
-    closeRegisterModalBtn = document.getElementById('close-register-modal-btn');
+    // 移除了 closeLoginModalBtn 和 closeRegisterModalBtn 的获取
     loginForm = document.getElementById('login-form');
     registerForm = document.getElementById('register-form');
     loginEmail = document.getElementById('login-email');
@@ -549,7 +592,7 @@ function initialize() {
     showRegisterBtn = document.getElementById('show-register-btn');
     showLoginBtn = document.getElementById('show-login-btn');
 
-    // 初始化用户信息
+    // 2. 初始化用户信息
     document.getElementById('user-email-display').textContent = "未登录";
     const savedApiKey = localStorage.getItem('deepseek_api_key');
     if (savedApiKey) {
@@ -557,13 +600,12 @@ function initialize() {
         apiKeyInput.value = savedApiKey;
     }
     
-    populateLibraryModal();
+    // 3. 绑定所有事件监听器（这样登录框才能工作）
     setupEventListeners();
 
-    // 加载最后一本书
-    const lastReadBookId = localStorage.getItem('lastReadBookId') || Object.keys(libraryData)[0];
-    const lastUsedDictId = localStorage.getItem(`selected_dictionary_for_${lastReadBookId}`) || libraryData[lastReadBookId].defaultDictionaryId;
-    loadBook(lastReadBookId, lastUsedDictId);
+    // 4. 显示登录框，开始应用流程
+    loginModal.classList.remove('hidden');
+    loginModal.classList.add('flex'); // 确保 flex 生效
 }
 
 // --- 启动应用 ---

@@ -2,8 +2,39 @@
 
 const API_BASE_URL = 'http://127.0.0.1:5000/api';
 
+// --- 新增：获取书库 ---
+async function getLibrary() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/library`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        return data; // 返回书库对象
+    } catch (error) {
+        console.error('获取书库失败:', error);
+        throw error; // 抛出错误，让调用者处理
+    }
+}
+
+// --- 新增：获取词典 ---
+async function getDictionaries() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/dictionaries`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        return data; // 返回词典对象
+    } catch (error) {
+        console.error('获取词典失败:', error);
+        throw error; // 抛出错误，让调用者处理
+    }
+}
+
 // 用户注册
 async function registerUser(email, password) {
+// ... (此部分及以下的用户函数保持不变) ...
     try {
         const response = await fetch(`${API_BASE_URL}/register`, {
             method: 'POST',
@@ -84,6 +115,8 @@ async function getReadingProgress(userId) {
 }
 
 export { 
+    getLibrary, // 新增
+    getDictionaries, // 新增
     registerUser, 
     loginUser, 
     updateUserApiKey, 

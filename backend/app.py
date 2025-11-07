@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 import bcrypt
 import os
+import json # 导入 json 模块
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -10,27 +11,22 @@ load_dotenv()
 app = Flask(__name__)
 
 # --- 数据库配置 (只使用 MySQL) ---
-# 1. 从 .env 文件加载数据库连接字符串
 db_url = os.getenv('DATABASE_URL')
-
-# 2. 检查配置是否存在
 if not db_url:
     print("--- 错误：未在 .env 文件中找到 DATABASE_URL 配置。---")
     print("--- 请确保 .env 文件在 backend 目录下，并包含 DATABASE_URL。 ---")
-    exit() # 停止应用，因为没有数据库无法运行
+    exit() 
 
-# 3. 配置 Flask
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')
-print(f"--- 正在尝试连接到数据库: {db_url.split('@')[-1]} ---") # 打印数据库地址 (隐藏密码)
-# --- 数据库配置结束 ---
+print(f"--- 正在尝试连接到数据库: {db_url.split('@')[-1]} ---")
 
 db = SQLAlchemy(app)
-# 明确允许来自你前端源的请求
 CORS(app, resources={r"/api/*": {"origins": ["http://localhost:8080", "http://127.0.0.1:8080"]}})
 
-# 用户模型
+# --- 数据库模型 ---
+
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -46,14 +42,76 @@ class User(db.Model):
     def check_password(self, password):
         return bcrypt.checkpw(password.encode('utf-8'), self.password_hash.encode('utf-8'))
 
-# 创建数据库表
-# 这会检查 MySQL 数据库，如果 "user" 表不存在，它会自动创建。
-with app.app_context():
-    db.create_all()
+# --- 新增：词典模型 ---
+class Dictionary(db.Model):
+    id = db.Column(db.String(100), primary_key=True) # e.g., 'api521_dict'
+    name = db.Column(db.String(255), nullable=False) # e.g., 'API 521 专业词典'
+    data = db.Column(db.Text, nullable=False) # 存储为 JSON 字符串
 
-# 用户注册
+# --- 新增：书籍模型 ---
+class Book(db.Model):
+    id = db.Column(db.String(100), primary_key=True) # e.g., 'api521'
+    title = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text)
+    default_dictionary_id = db.Column(db.String(100), db.ForeignKey('dictionary.id'))
+    
+    # 建立与 BookPage 的一对多关系
+    pages = db.relationship('BookPage', backref='book', lazy=True, order_by='BookPage.page_number')
+
+# --- 新增：书页模型 ---
+class BookPage(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    book_id = db.Column(db.String(100), db.ForeignKey('book.id'), nullable=False)
+    page_number = db.Column(db.Integer, nullable=False)
+    html_content = db.Column(db.Text, nullable=False)
+
+
+# --- (已删除：庞大的 seed_database 函数和数据) ---
+
+
+# --- (已删除：启动时自动运行的 db.create_all() 和 seed_database()) ---
+
+
+# --- API：获取书库 ---
+@app.route('/api/library', methods=['GET'])
+def get_library():
+    try:
+        books = Book.query.all()
+        library_data = {}
+        for book in books:
+            # 按页码顺序获取书页内容
+            book_pages = [page.html_content for page in book.pages]
+            library_data[book.id] = {
+                'title': book.title,
+                'description': book.description,
+                'defaultDictionaryId': book.default_dictionary_id,
+                'content': book_pages
+            }
+        return jsonify(library_data), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# --- API：获取词典 ---
+@app.route('/api/dictionaries', methods=['GET'])
+def get_dictionaries():
+    try:
+        dictionaries = Dictionary.query.all()
+        dict_data = {}
+        for d in dictionaries:
+            dict_data[d.id] = {
+                'name': d.name,
+                'data': json.loads(d.data) # 反序列化 JSON 字符串
+            }
+        return jsonify(dict_data), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# --- 用户 API 路由 ---
+
 @app.route('/api/register', methods=['POST'])
 def register():
+# ... (此部分及以下的用户路由与你现有的代码保持一致) ...
     data = request.get_json()
     email = data.get('email')
     password = data.get('password')
