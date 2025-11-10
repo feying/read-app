@@ -217,7 +217,7 @@ def search_book(book_id: str):
 @app.route('/api/me', methods=['GET'])
 @jwt_required()
 def get_current_user():
-    user = User.query.get(get_jwt_identity())
+    user = User.query.get(int(get_jwt_identity()))
     if not user:
         return jsonify({'error': '\u7528\u6237\u4e0d\u5b58\u5728'}), 404
     return jsonify({'user': serialize_user(user)}), 200
@@ -240,7 +240,7 @@ def register():
     db.session.add(user)
     db.session.commit()
 
-    token = create_access_token(identity=user.id)
+    token = create_access_token(identity=str(user.id))
     return jsonify({
         'message': '\u7528\u6237\u6ce8\u518c\u6210\u529f',
         'user': serialize_user(user),
@@ -261,7 +261,7 @@ def login():
     if not user or not user.check_password(password):
         return jsonify({'error': '\u90ae\u7bb1\u6216\u5bc6\u7801\u9519\u8bef'}), 401
 
-    token = create_access_token(identity=user.id)
+    token = create_access_token(identity=str(user.id))
     return jsonify({
         'message': '\u767b\u5f55\u6210\u529f',
         'user': serialize_user(user),
@@ -278,7 +278,7 @@ def update_api_key():
     if not api_key:
         return jsonify({'error': 'API \u5bc6\u94a5\u662f\u5fc5\u586b\u9879'}), 400
 
-    user = User.query.get(get_jwt_identity())
+    user = User.query.get(int(get_jwt_identity()))
     if not user:
         return jsonify({'error': '\u7528\u6237\u4e0d\u5b58\u5728'}), 404
 
@@ -298,7 +298,7 @@ def update_progress():
     if not book_id:
         return jsonify({'error': '\u4e66\u7c4d ID \u662f\u5fc5\u586b\u9879'}), 400
 
-    user = User.query.get(get_jwt_identity())
+    user = User.query.get(int(get_jwt_identity()))
     if not user:
         return jsonify({'error': '\u7528\u6237\u4e0d\u5b58\u5728'}), 404
 
@@ -319,7 +319,7 @@ def update_progress():
 @app.route('/api/user/progress/<int:user_id>', methods=['GET'])
 @jwt_required()
 def get_progress(user_id: int):
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     if current_user_id != user_id:
         return jsonify({'error': '\u65e0\u6743\u8bbf\u95ee\u8be5\u7528\u6237\u8fdb\u5ea6'}), 403
 

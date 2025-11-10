@@ -314,7 +314,7 @@ function renderPaginationControls() {
     prevButton.addEventListener('click', () => loadPage(currentPage - 1));
 
     const pageIndicator = document.createElement('span');
-    pageIndicator.textContent = 第  /  页;
+    pageIndicator.textContent = '\u7b2c ' + (currentPage + 1) + ' / ' + totalPages + ' \u9875';
     pageIndicator.className = 'text-sm text-gray-600';
 
     const nextButton = document.createElement('button');
