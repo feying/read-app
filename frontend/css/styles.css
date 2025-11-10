@@ -7,6 +7,7 @@ body { background-color: #f0f2f5; }
     --font-chinese: 'Noto Serif SC', serif;
     display: flex;
     flex-direction: column;
+    box-sizing: border-box;
 }
 #content {
     flex-grow: 1;
@@ -55,6 +56,22 @@ th { background-color: #f3f4f6; font-weight: bold; }
 
 /* 打印样式 */
 @media print {
+    .page {
+        width: 210mm;
+        height: auto;
+        min-height: calc(297mm - 30mm);
+        padding: 15mm !important;
+        box-sizing: border-box;
+    }
+    .page:last-child {
+        page-break-after: auto !important;
+    }
+    @page {
+        margin: 0;
+    }
+    body {
+        margin: 0;
+    }
     body > * {
         display: none !important;
     }
