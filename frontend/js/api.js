@@ -1,125 +1,161 @@
-// --- 后端 API 通信模块 ---
-
 const API_BASE_URL = 'http://127.0.0.1:5000/api';
 
-// --- 新增：获取书库 ---
+let authToken = null;
+
+function buildHeaders(headers = {}) {
+    const combined = { ...headers };
+    if (authToken) {
+        combined['Authorization'] = `Bearer ${authToken}`;
+    }
+    return combined;
+}
+
+async function handleJsonResponse(response) {
+    const data = await response.json().catch(() => ({}));
+    const unauthorized = response.status === 401 || response.status === 403;
+    return { success: response.ok, unauthorized, data };
+}
+
+async function fetchProtectedJson(path, options = {}) {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+        method: options.method || 'GET',
+        headers: buildHeaders(options.headers),
+        body: options.body,
+    });
+    const data = await response.json().catch(() => ({}));
+    if ((response.status === 401 || response.status === 403)) {
+        const error = new Error('UNAUTHORIZED');
+        error.data = data;
+        throw error;
+    }
+    if (!response.ok) {
+        const msg = data?.error || `HTTP error! status: ${response.status}`;
+        throw new Error(msg);
+    }
+    return data;
+}
+
 async function getLibrary() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/library`);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        return data; // 返回书库对象
-    } catch (error) {
-        console.error('获取书库失败:', error);
-        throw error; // 抛出错误，让调用者处理
-    }
+    return fetchProtectedJson('/library');
 }
 
-// --- 新增：获取词典 ---
 async function getDictionaries() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/dictionaries`);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        return data; // 返回词典对象
-    } catch (error) {
-        console.error('获取词典失败:', error);
-        throw error; // 抛出错误，让调用者处理
-    }
+    return fetchProtectedJson('/dictionaries');
 }
 
-// 用户注册
 async function registerUser(email, password) {
-// ... (此部分及以下的用户函数保持不变) ...
     try {
         const response = await fetch(`${API_BASE_URL}/register`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: buildHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify({ email, password })
         });
-        const data = await response.json();
-        return { success: response.ok, data };
+        return await handleJsonResponse(response);
     } catch (error) {
         console.error('注册失败:', error);
-        return { success: false, data: { error: '网络错误，请检查后端服务器是否运行' } };
+        return { success: false, data: { error: '无法连接服务器，请稍后再试' } };
     }
 }
 
-// 用户登录
 async function loginUser(email, password) {
     try {
         const response = await fetch(`${API_BASE_URL}/login`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: buildHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify({ email, password })
         });
-        const data = await response.json();
-        return { success: response.ok, data };
+        return await handleJsonResponse(response);
     } catch (error) {
         console.error('登录失败:', error);
-        return { success: false, data: { error: '网络错误，请检查后端服务器是否运行' } };
+        return { success: false, data: { error: '无法连接服务器，请稍后再试' } };
     }
 }
 
-// 更新 API Key
 async function updateUserApiKey(userId, apiKey) {
     try {
         const response = await fetch(`${API_BASE_URL}/user/api_key`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: buildHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify({ user_id: userId, api_key: apiKey })
         });
-        const data = await response.json();
-        return { success: response.ok, data };
+        return await handleJsonResponse(response);
     } catch (error) {
-        console.error('更新API密钥失败:', error);
-        return { success: false, data: { error: '网络错误' } };
+        console.error('更新 API Key 失败:', error);
+        return { success: false, data: { error: '网络异常' } };
     }
 }
 
-// 更新阅读进度
 async function updateReadingProgress(userId, bookId, currentPage, readingProgress) {
     try {
         const response = await fetch(`${API_BASE_URL}/user/progress`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                user_id: userId, 
-                book_id: bookId, 
+            headers: buildHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({
+                user_id: userId,
+                book_id: bookId,
                 current_page: currentPage,
-                reading_progress: readingProgress 
+                reading_progress: readingProgress
             })
         });
-        const data = await response.json();
-        return { success: response.ok, data };
+        return await handleJsonResponse(response);
     } catch (error) {
         console.error('更新阅读进度失败:', error);
-        return { success: false, data: { error: '网络错误' } };
+        return { success: false, data: { error: '网络异常' } };
     }
 }
 
-// 获取阅读进度
 async function getReadingProgress(userId) {
     try {
-        const response = await fetch(`${API_BASE_URL}/user/progress/${userId}`);
-        const data = await response.json();
-        return { success: response.ok, data };
+        const response = await fetch(`${API_BASE_URL}/user/progress/${userId}`, {
+            headers: buildHeaders()
+        });
+        return await handleJsonResponse(response);
     } catch (error) {
         console.error('获取阅读进度失败:', error);
-        return { success: false, data: { error: '网络错误' } };
+        return { success: false, data: { error: '网络异常' } };
     }
 }
 
-export { 
-    getLibrary, // 新增
-    getDictionaries, // 新增
-    registerUser, 
-    loginUser, 
-    updateUserApiKey, 
-    updateReadingProgress, 
-    getReadingProgress 
+async function getCurrentUser() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/me`, {
+            headers: buildHeaders()
+        });
+        return await handleJsonResponse(response);
+    } catch (error) {
+        console.error('获取当前用户信息失败:', error);
+        return { success: false, data: { error: '网络异常' } };
+    }
+}
+
+async function getBookPages(bookId, pageNumber, count = 1) {
+    return fetchProtectedJson(`/books/${bookId}/pages/${pageNumber}?count=${count}`);
+}
+
+async function searchBook(bookId, query) {
+    const encoded = encodeURIComponent(query);
+    return fetchProtectedJson(`/books/${bookId}/search?q=${encoded}`);
+}
+
+function setAuthToken(token) {
+    authToken = token;
+}
+
+function clearAuthToken() {
+    authToken = null;
+}
+
+export {
+    getLibrary,
+    getDictionaries,
+    registerUser,
+    loginUser,
+    updateUserApiKey,
+    updateReadingProgress,
+    getReadingProgress,
+    getCurrentUser,
+    getBookPages,
+    searchBook,
+    setAuthToken,
+    clearAuthToken,
 };

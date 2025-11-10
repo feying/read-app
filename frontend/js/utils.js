@@ -50,7 +50,7 @@ function parsePageRange(rangeStr, maxPage) {
 }
 
 // 解析内容并添加单词容器
-function parseContent(targetDiv, contentHtml, isForPrint = false, pageWordCounterOffset = 0, currentBookId = 'default') {
+function parseContent(targetDiv, contentHtml, isForPrint = false, pageWordCounterOffset = 0, currentBookId = 'default', pageNumber = 0) {
     targetDiv.innerHTML = contentHtml;
     let wordCounter = pageWordCounterOffset;
 
@@ -79,7 +79,7 @@ function parseContent(targetDiv, contentHtml, isForPrint = false, pageWordCounte
                         const wordSpan = document.createElement('span');
                         wordSpan.className = 'word';
                         wordSpan.textContent = item;
-                        wordSpan.dataset.wordId = `${currentBookId}-${wordCounter++}`;
+                        wordSpan.dataset.wordId = `${currentBookId}-p${pageNumber}-${wordCounter++}`;
                         wordContainer.appendChild(wordSpan);
                         block.appendChild(wordContainer);
                     } else {

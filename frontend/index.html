@@ -29,6 +29,18 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
             </svg>
         </button>
+        <!-- TOC Button -->
+        <button id="toc-btn" class="bg-white p-2 rounded-full shadow-lg hover:bg-gray-100 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h10M4 18h6" />
+            </svg>
+        </button>
+        <!-- Search Button -->
+        <button id="search-btn" class="bg-white p-2 rounded-full shadow-lg hover:bg-gray-100 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M5 11a6 6 0 1112 0 6 6 0 01-12 0z" />
+            </svg>
+        </button>
         <!-- User Profile Button -->
         <button id="user-btn" class="bg-white p-2 rounded-full shadow-lg hover:bg-gray-100 transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
@@ -43,6 +55,33 @@
             </button>
             <h3 class="text-xl font-bold mb-4 text-gray-800">书库</h3>
             <div id="library-list" class="space-y-3"></div>
+        </div>
+    </div>
+
+    <!-- TOC Modal -->
+    <div id="toc-modal" class="fixed inset-0 bg-gray-900 bg-opacity-60 items-center justify-center hidden z-50 p-4">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md relative mx-auto mt-16">
+            <button id="close-toc-modal-btn" class="absolute top-3 right-3 text-gray-500 hover:text-gray-800 transition-transform duration-200 hover:rotate-90">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+            <h3 class="text-xl font-bold mb-4 text-gray-800">章节目录</h3>
+            <div id="toc-list" class="space-y-2 max-h-[420px] overflow-y-auto"></div>
+        </div>
+    </div>
+
+    <!-- Search Modal -->
+    <div id="search-modal" class="fixed inset-0 bg-gray-900 bg-opacity-60 items-center justify-center hidden z-50 p-4">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl relative mx-auto mt-16">
+            <button id="close-search-modal-btn" class="absolute top-3 right-3 text-gray-500 hover:text-gray-800 transition-transform duration-200 hover:rotate-90">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+            <h3 class="text-xl font-bold mb-4 text-gray-800">全文检索</h3>
+            <form id="search-form" class="flex space-x-2 mb-4">
+                <input id="search-input" type="text" class="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="输入关键字，至少2个字符" required minlength="2">
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700 transition-colors whitespace-nowrap">检索</button>
+            </form>
+            <div id="search-status" class="text-sm text-gray-500 h-5"></div>
+            <div id="search-results" class="mt-4 space-y-3 max-h-[360px] overflow-y-auto"></div>
         </div>
     </div>
 
