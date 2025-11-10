@@ -54,6 +54,33 @@ function parseContent(targetDiv, contentHtml, isForPrint = false, pageWordCounte
     targetDiv.innerHTML = contentHtml;
     let wordCounter = pageWordCounterOffset;
 
+    const processNode = (node, parent) => {
+        if (node.nodeType === Node.TEXT_NODE) {
+            const text = node.textContent;
+            const wordsAndSeparators = text.split(/([,.\s\n]+)/);
+            wordsAndSeparators.forEach(item => {
+                if (item.trim() !== '') {
+                    const wordContainer = document.createElement('div');
+                    wordContainer.className = 'word-container';
+                    const wordSpan = document.createElement('span');
+                    wordSpan.className = 'word';
+                    wordSpan.textContent = item;
+                    wordSpan.dataset.wordId = `${currentBookId}-p${pageNumber}-${wordCounter++}`;
+                    wordContainer.appendChild(wordSpan);
+                    parent.appendChild(wordContainer);
+                } else if (item !== '') {
+                    parent.appendChild(document.createTextNode(item));
+                }
+            });
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+            const clone = node.cloneNode(false);
+            parent.appendChild(clone);
+            Array.from(node.childNodes).forEach(child => processNode(child, clone));
+        } else {
+            parent.appendChild(node.cloneNode(true));
+        }
+    };
+
     const textBlocks = targetDiv.querySelectorAll('h3, h4, h5, h6, p, td');
     textBlocks.forEach(block => {
         if (block.tagName === 'P' && !isForPrint) {
@@ -68,28 +95,7 @@ function parseContent(targetDiv, contentHtml, isForPrint = false, pageWordCounte
 
         const nodes = Array.from(block.childNodes);
         block.innerHTML = '';
-        nodes.forEach(node => {
-            if (node.nodeType === Node.TEXT_NODE) {
-                const text = node.textContent;
-                const wordsAndSeparators = text.split(/([,.\s\n]+)/);
-                wordsAndSeparators.forEach(item => {
-                    if (item.trim() !== '') {
-                        const wordContainer = document.createElement('div');
-                        wordContainer.className = 'word-container';
-                        const wordSpan = document.createElement('span');
-                        wordSpan.className = 'word';
-                        wordSpan.textContent = item;
-                        wordSpan.dataset.wordId = `${currentBookId}-p${pageNumber}-${wordCounter++}`;
-                        wordContainer.appendChild(wordSpan);
-                        block.appendChild(wordContainer);
-                    } else {
-                        block.appendChild(document.createTextNode(item));
-                    }
-                });
-            } else {
-                block.appendChild(node.cloneNode(true));
-            }
-        });
+        nodes.forEach(node => processNode(node, block));
     });
     return wordCounter;
 }
