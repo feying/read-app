@@ -1,12 +1,19 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Blueprint
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
-from flask_jwt_extended import JWTManager, create_access_token, get_jwt_identity, jwt_required
+from flask_jwt_extended import (
+    JWTManager,
+    create_access_token,
+    get_jwt_identity,
+    get_jwt,
+    jwt_required
+)
 import bcrypt
 import os
 import json
 import re
 from datetime import timedelta
+from functools import wraps
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -30,6 +37,23 @@ print(f"--- \u5c1d\u8bd5\u8fde\u63a5\u6570\u636e\u5e93: {db_url.split('@')[-1]} 
 db = SQLAlchemy(app)
 jwt = JWTManager(app)
 CORS(app, resources={r"/api/*": {"origins": ["http://localhost:8080", "http://127.0.0.1:8080"]}})
+ADMIN_EMAIL = os.getenv('ADMIN_EMAIL')
+ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD')
+if not ADMIN_EMAIL or not ADMIN_PASSWORD:
+    raise SystemExit("请在 .env 中配置 ADMIN_EMAIL 与 ADMIN_PASSWORD 以启用后台管理登录。")
+
+admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
+
+
+def admin_required(fn):
+    @wraps(fn)
+    @jwt_required()
+    def wrapper(*args, **kwargs):
+        claims = get_jwt()
+        if not claims.get('is_admin'):
+            return jsonify({'error': 'Forbidden'}), 403
+        return fn(*args, **kwargs)
+    return wrapper
 
 # --- Database models ---
 class User(db.Model):
@@ -117,6 +141,73 @@ def serialize_book_metadata(book: Book) -> dict:
         'pageCount': page_count,
         'chapters': chapters
     }
+
+
+# --- Admin APIs ---
+@admin_bp.post('/login')
+def admin_login():
+    data = request.get_json(silent=True) or {}
+    email = (data.get('email') or '').strip()
+    password = data.get('password') or ''
+
+    if email != ADMIN_EMAIL or password != ADMIN_PASSWORD:
+        return jsonify({'error': '管理员邮箱或密码错误'}), 401
+
+    token = create_access_token(
+        identity=f'admin:{email}',
+        additional_claims={'is_admin': True}
+    )
+    return jsonify({'message': '管理员登录成功', 'token': token}), 200
+
+
+@admin_bp.get('/books')
+@admin_required
+def admin_list_books():
+    books = Book.query.all()
+    items = []
+    for book in books:
+        items.append({
+            'id': book.id,
+            'title': book.title,
+            'description': book.description,
+            'defaultDictionaryId': book.default_dictionary_id,
+            'pageCount': book.pages.count() if hasattr(book.pages, 'count') else len(book.pages or []),
+            'chapterCount': len(book.chapters or [])
+        })
+    return jsonify({'items': items}), 200
+
+
+@admin_bp.get('/dictionaries')
+@admin_required
+def admin_list_dictionaries():
+    dictionaries = Dictionary.query.all()
+    items = []
+    for dic in dictionaries:
+        try:
+            parsed = json.loads(dic.data)
+        except Exception:
+            parsed = {}
+        data_preview = list(parsed.items())[:5]
+        items.append({
+            'id': dic.id,
+            'name': dic.name,
+            'entryCount': len(parsed),
+            'preview': data_preview
+        })
+    return jsonify({'items': items}), 200
+
+
+@admin_bp.get('/users')
+@admin_required
+def admin_list_users():
+    users = User.query.order_by(User.id.asc()).all()
+    items = [{
+        'id': user.id,
+        'email': user.email,
+        'currentBookId': user.current_book_id,
+        'currentPage': user.current_page
+    } for user in users]
+    return jsonify({'items': items}), 200
 
 
 # --- Library APIs ---
@@ -333,6 +424,8 @@ def get_progress(user_id: int):
         'reading_progress': user.reading_progress,
     }), 200
 
+
+app.register_blueprint(admin_bp)
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

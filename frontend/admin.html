@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>后台管理 - 英语阅读助手</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="max-w-5xl mx-auto py-12 px-4">
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800">后台管理面板</h1>
+                <p class="text-gray-500 text-sm mt-1">用于管理书籍、词典与用户数据（管理员登录）</p>
+            </div>
+            <button id="back-to-reader" class="text-blue-600 hover:text-blue-500 text-sm">返回阅读器</button>
+        </div>
+
+        <div id="admin-login-panel" class="bg-white shadow rounded-lg p-6 max-w-md">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">管理员登录</h2>
+            <form id="admin-login-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">邮箱</label>
+                    <input type="email" id="admin-email" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="admin@example.com" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">密码</label>
+                    <input type="password" id="admin-password" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入管理员密码" required>
+                </div>
+                <p id="admin-login-error" class="text-sm text-red-500 h-5"></p>
+                <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-md text-sm hover:bg-blue-700 transition-colors">登录</button>
+            </form>
+        </div>
+
+        <div id="admin-dashboard" class="hidden">
+            <div class="flex items-center justify-between bg-white shadow rounded-lg p-6 mb-6">
+                <div>
+                    <p class="text-sm text-gray-500">当前管理员</p>
+                    <p id="admin-identity" class="text-lg font-semibold text-gray-800">-</p>
+                </div>
+                <button id="admin-logout-btn" class="text-sm text-red-500 hover:text-red-600">退出登录</button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <section class="bg-white shadow rounded-lg p-4 flex flex-col">
+                    <div class="flex items-center justify-between mb-3">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-800">书籍管理</h3>
+                            <p class="text-xs text-gray-500">查看当前所有书籍记录</p>
+                        </div>
+                        <button id="refresh-books" class="text-sm text-blue-600 hover:text-blue-500">刷新</button>
+                    </div>
+                    <pre id="admin-books" class="flex-1 bg-gray-50 rounded-md p-3 text-xs overflow-auto"></pre>
+                </section>
+
+                <section class="bg-white shadow rounded-lg p-4 flex flex-col">
+                    <div class="flex items-center justify-between mb-3">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-800">词典管理</h3>
+                            <p class="text-xs text-gray-500">查看词典与词条数量</p>
+                        </div>
+                        <button id="refresh-dictionaries" class="text-sm text-blue-600 hover:text-blue-500">刷新</button>
+                    </div>
+                    <pre id="admin-dictionaries" class="flex-1 bg-gray-50 rounded-md p-3 text-xs overflow-auto"></pre>
+                </section>
+
+                <section class="bg-white shadow rounded-lg p-4 flex flex-col">
+                    <div class="flex items-center justify-between mb-3">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-800">用户管理</h3>
+                            <p class="text-xs text-gray-500">查看注册用户概况</p>
+                        </div>
+                        <button id="refresh-users" class="text-sm text-blue-600 hover:text-blue-500">刷新</button>
+                    </div>
+                    <pre id="admin-users" class="flex-1 bg-gray-50 rounded-md p-3 text-xs overflow-auto"></pre>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/admin.js"></script>
+</body>
+</html>
