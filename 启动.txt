@@ -13,6 +13,50 @@ pip install -r requirements.txt
 启动后端python app.py
 
 
+数据库中插入数据方法。
+INSERT INTO dictionary (id, name, data)
+VALUES (
+    'chem_eng_dict',
+    '化工工程词典',
+    JSON_OBJECT(
+        'pump', '泵',
+        'vessel', '容器',
+        'duty', '工况',
+        'flare', '火炬'
+    )
+);
+
+
+
+导出scheme的方法：（前提是要先USE 数据库；
+在不同版本的 Workbench 里，“DDL” 这个 Tab 可能位置不一样，甚至默认不显示。你可以用下面的通用方法获取 CREATE TABLE 语句：
+
+方式一：Schema Inspector
+
+左侧 schema 列表里右键某个表 → 选择 “Table Inspector” 或 “Schema Inspector”。
+在右侧弹出的窗口中，通常会有 “Columns / Indexes / Foreign Keys / Triggers / DDL” 等标签。如果你没看到 “DDL”，尝试横向滚动 tab 或拉宽窗口；有时标签被折叠在右上角的小下拉菜单里。
+找到 “DDL” 后复制里边的 CREATE TABLE ... 内容即可。
+方式二：手动执行 SHOW CREATE TABLE
+在 Workbench 的 SQL 编辑器里，执行：
+
+SHOW CREATE TABLE your_table_name\G
+这会列出该表的完整建表语句，复制输出贴给我即可。\G 的作用是让结果按竖排显示，方便阅读；也可以用 \G 替换为 ; 直接输出。
+
+方式三：数据导出结构
+
+在 MySQL Workbench 中导出结构的完整步骤：
+打开 Workbench，连接到你的 MySQL 实例。
+顶部菜单点击 Server → Data Export（中文界面就是“服务器 → 数据导出”）。
+在左侧 “Schemas” 栏里，勾选你要导出的那个数据库（schema）。
+右侧的 “Export Options” 里选择 “Dump Structure Only”（只导出结构，不导出数据）。
+在 “Export to Self-Contained File” 下方指定一个输出路径（例如 C:\dump\reading_app_structure.sql）。
+检查下方表列表中需要导出的表是否都处于选中状态（默认全部选中）。
+点击右下角 “Start Export”。完成后指定目录里会生成一个 SQL 文件，里面就是所有 CREATE TABLE … 语句。
+用文本编辑器打开该 .sql 文件，把相关片段（例如 CREATE TABLE user ...）复制给我即可。
+
+
+
+
 
 功能描述
 1. 普通用户功能
