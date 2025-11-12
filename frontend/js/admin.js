@@ -15,6 +15,12 @@ const refreshBooksBtn = document.getElementById('refresh-books');
 const refreshDictionariesBtn = document.getElementById('refresh-dictionaries');
 const refreshUsersBtn = document.getElementById('refresh-users');
 const backBtn = document.getElementById('back-to-reader');
+const sidebar = document.getElementById('admin-sidebar');
+const sidebarOpenBtn = document.getElementById('sidebar-open-btn');
+const sidebarCloseBtn = document.getElementById('sidebar-close-btn');
+const navLinks = document.querySelectorAll('.admin-nav-link');
+const panels = document.querySelectorAll('[data-panel-content]');
+const panelPlaceholder = document.getElementById('admin-panel-placeholder');
 
 const ADMIN_TOKEN_KEY = 'admin_token';
 
@@ -107,8 +113,51 @@ async function refreshUsers() {
     }
 }
 
-async function bootstrapDashboard() {
-    await Promise.all([refreshBooks(), refreshDictionaries(), refreshUsers()]);
+function toggleSidebar(show) {
+    if (!sidebar) return;
+    if (show) {
+        sidebar.classList.remove('-translate-x-full');
+    } else {
+        sidebar.classList.add('-translate-x-full');
+    }
+}
+
+function highlightNav(targetName) {
+    navLinks.forEach(link => {
+        const isActive = link.dataset.panel === targetName;
+        link.classList.toggle('bg-gray-100', isActive);
+        link.classList.toggle('text-gray-800', isActive);
+        link.classList.toggle('text-gray-600', !isActive);
+    });
+}
+
+async function showPanel(panelName) {
+    let found = false;
+    panels.forEach(panel => {
+        if (panel.dataset.panelContent === panelName) {
+            panel.classList.remove('hidden');
+            found = true;
+        } else {
+            panel.classList.add('hidden');
+        }
+    });
+    if (panelPlaceholder) {
+        panelPlaceholder.classList.toggle('hidden', found);
+    }
+    highlightNav(panelName);
+
+    if (!found) return;
+    switch (panelName) {
+        case 'books':
+            await refreshBooks();
+            break;
+        case 'dictionaries':
+            await refreshDictionaries();
+            break;
+        case 'users':
+            await refreshUsers();
+            break;
+    }
 }
 
 loginForm?.addEventListener('submit', async (event) => {
@@ -121,7 +170,7 @@ loginForm?.addEventListener('submit', async (event) => {
         setAdminToken(result.token);
         showDashboard(email);
         loginError.textContent = '';
-        await bootstrapDashboard();
+        await showPanel('books');
     } catch (error) {
         loginError.textContent = error.message;
     }
@@ -135,6 +184,15 @@ logoutBtn?.addEventListener('click', () => {
 refreshBooksBtn?.addEventListener('click', refreshBooks);
 refreshDictionariesBtn?.addEventListener('click', refreshDictionaries);
 refreshUsersBtn?.addEventListener('click', refreshUsers);
+navLinks.forEach(link => {
+    link.addEventListener('click', async () => {
+        const panelName = link.dataset.panel;
+        await showPanel(panelName);
+        toggleSidebar(false);
+    });
+});
+sidebarOpenBtn?.addEventListener('click', () => toggleSidebar(true));
+sidebarCloseBtn?.addEventListener('click', () => toggleSidebar(false));
 
 backBtn?.addEventListener('click', () => {
     window.location.href = 'index.html';
@@ -147,7 +205,7 @@ backBtn?.addEventListener('click', () => {
         return;
     }
     showDashboard('管理员');
-    bootstrapDashboard().catch(() => {
+    showPanel('books').catch(() => {
         clearAdminToken();
         showLogin();
     });

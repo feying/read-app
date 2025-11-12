@@ -8,7 +8,8 @@
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body class="bg-gray-100 min-h-screen">
-    <div class="max-w-5xl mx-auto py-12 px-4">
+    <!-- 登录面板 -->
+    <div id="admin-login-panel" class="max-w-5xl mx-auto py-12 px-4">
         <div class="flex items-center justify-between mb-8">
             <div>
                 <h1 class="text-3xl font-bold text-gray-800">后台管理面板</h1>
@@ -17,7 +18,7 @@
             <button id="back-to-reader" class="text-blue-600 hover:text-blue-500 text-sm">返回阅读器</button>
         </div>
 
-        <div id="admin-login-panel" class="bg-white shadow rounded-lg p-6 max-w-md">
+        <div class="bg-white shadow rounded-lg p-6 max-w-md">
             <h2 class="text-xl font-semibold text-gray-800 mb-4">管理员登录</h2>
             <form id="admin-login-form" class="space-y-4">
                 <div>
@@ -32,18 +33,40 @@
                 <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-md text-sm hover:bg-blue-700 transition-colors">登录</button>
             </form>
         </div>
+    </div>
 
-        <div id="admin-dashboard" class="hidden">
-            <div class="flex items-center justify-between bg-white shadow rounded-lg p-6 mb-6">
-                <div>
-                    <p class="text-sm text-gray-500">当前管理员</p>
-                    <p id="admin-identity" class="text-lg font-semibold text-gray-800">-</p>
-                </div>
+    <!-- 后台面板 -->
+    <div id="admin-dashboard" class="hidden min-h-screen">
+        <div class="flex items-center justify-between bg-white shadow rounded-lg p-6 mb-6 max-w-6xl mx-auto mt-8">
+            <div>
+                <p class="text-sm text-gray-500">当前管理员</p>
+                <p id="admin-identity" class="text-lg font-semibold text-gray-800">-</p>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button id="sidebar-open-btn" class="text-sm text-blue-600 hover:text-blue-500 lg:hidden">打开菜单</button>
                 <button id="admin-logout-btn" class="text-sm text-red-500 hover:text-red-600">退出登录</button>
             </div>
+        </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <section class="bg-white shadow rounded-lg p-4 flex flex-col">
+        <div class="flex max-w-6xl mx-auto px-4 pb-12">
+            <aside id="admin-sidebar" class="bg-white shadow rounded-lg w-60 mr-4 transform -translate-x-full lg:translate-x-0 transition-transform duration-200">
+                <div class="flex items-center justify-between p-4 border-b">
+                    <h3 class="text-lg font-semibold text-gray-800">管理菜单</h3>
+                    <button id="sidebar-close-btn" class="text-sm text-gray-500 hover:text-gray-700 lg:hidden">关闭</button>
+                </div>
+                <nav class="p-4 space-y-2">
+                    <button class="admin-nav-link w-full text-left px-3 py-2 rounded-md text-sm bg-gray-100 text-gray-800" data-panel="books">书籍管理</button>
+                    <button class="admin-nav-link w-full text-left px-3 py-2 rounded-md text-sm text-gray-600 hover:bg-gray-100" data-panel="dictionaries">词典管理</button>
+                    <button class="admin-nav-link w-full text-left px-3 py-2 rounded-md text-sm text-gray-600 hover:bg-gray-100" data-panel="users">用户管理</button>
+                </nav>
+            </aside>
+
+            <main class="flex-1">
+                <div id="admin-panel-placeholder" class="bg-white shadow rounded-lg p-6 text-gray-600 text-sm">
+                    从左侧选择一个模块来查看数据。
+                </div>
+
+                <section data-panel-content="books" class="hidden bg-white shadow rounded-lg p-6 flex flex-col">
                     <div class="flex items-center justify-between mb-3">
                         <div>
                             <h3 class="text-lg font-semibold text-gray-800">书籍管理</h3>
@@ -51,21 +74,21 @@
                         </div>
                         <button id="refresh-books" class="text-sm text-blue-600 hover:text-blue-500">刷新</button>
                     </div>
-                    <pre id="admin-books" class="flex-1 bg-gray-50 rounded-md p-3 text-xs overflow-auto"></pre>
+                    <pre id="admin-books" class="flex-1 bg-gray-50 rounded-md p-3 text-xs overflow-auto min-h-[200px]"></pre>
                 </section>
 
-                <section class="bg-white shadow rounded-lg p-4 flex flex-col">
+                <section data-panel-content="dictionaries" class="hidden bg-white shadow rounded-lg p-6 flex flex-col mt-6">
                     <div class="flex items-center justify-between mb-3">
                         <div>
                             <h3 class="text-lg font-semibold text-gray-800">词典管理</h3>
-                            <p class="text-xs text-gray-500">查看词典与词条数量</p>
+                            <p a class="text-xs text-gray-500">查看词典与词条数量</p>
                         </div>
                         <button id="refresh-dictionaries" class="text-sm text-blue-600 hover:text-blue-500">刷新</button>
                     </div>
-                    <pre id="admin-dictionaries" class="flex-1 bg-gray-50 rounded-md p-3 text-xs overflow-auto"></pre>
+                    <pre id="admin-dictionaries" class="flex-1 bg-gray-50 rounded-md p-3 text-xs overflow-auto min-h-[200px]"></pre>
                 </section>
 
-                <section class="bg-white shadow rounded-lg p-4 flex flex-col">
+                <section data-panel-content="users" class="hidden bg-white shadow rounded-lg p-6 flex flex-col mt-6">
                     <div class="flex items-center justify-between mb-3">
                         <div>
                             <h3 class="text-lg font-semibold text-gray-800">用户管理</h3>
@@ -73,9 +96,9 @@
                         </div>
                         <button id="refresh-users" class="text-sm text-blue-600 hover:text-blue-500">刷新</button>
                     </div>
-                    <pre id="admin-users" class="flex-1 bg-gray-50 rounded-md p-3 text-xs overflow-auto"></pre>
+                    <pre id="admin-users" class="flex-1 bg-gray-50 rounded-md p-3 text-xs overflow-auto min-h-[200px]"></pre>
                 </section>
-            </div>
+            </main>
         </div>
     </div>
 
