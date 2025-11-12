@@ -3,19 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>后台管理 - 英语阅读助手</title>
+    <title>后台管理 - 英语阅读器</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body class="bg-gray-100 min-h-screen">
-    <!-- 登录面板 -->
+    <!-- 登录界面 -->
     <div id="admin-login-panel" class="max-w-5xl mx-auto py-12 px-4">
         <div class="flex items-center justify-between mb-8">
             <div>
-                <h1 class="text-3xl font-bold text-gray-800">后台管理面板</h1>
-                <p class="text-gray-500 text-sm mt-1">用于管理书籍、词典与用户数据（管理员登录）</p>
+                <h1 class="text-3xl font-bold text-gray-800">后台管理员</h1>
+                <p class="text-gray-500 text-sm mt-1">用于维护书籍 / 词典 / 用户数据，仅管理员可登录</p>
             </div>
-            <button id="back-to-reader" class="text-blue-600 hover:text-blue-500 text-sm">返回阅读器</button>
+            <button id="back-to-reader" class="text-blue-600 hover:text-blue-500 text-sm">返回阅读页</button>
         </div>
 
         <div class="bg-white shadow rounded-lg p-6 max-w-md">
@@ -35,7 +35,7 @@
         </div>
     </div>
 
-    <!-- 后台面板 -->
+    <!-- 管理面板 -->
     <div id="admin-dashboard" class="hidden min-h-screen">
         <div class="flex items-center justify-between bg-white shadow rounded-lg p-6 mb-6 max-w-6xl mx-auto mt-8">
             <div>
@@ -43,16 +43,16 @@
                 <p id="admin-identity" class="text-lg font-semibold text-gray-800">-</p>
             </div>
             <div class="flex items-center space-x-4">
-                <button id="sidebar-open-btn" class="text-sm text-blue-600 hover:text-blue-500 lg:hidden">打开菜单</button>
+                <button id="sidebar-open-btn" class="text-sm text-blue-600 hover:text-blue-500 lg:hidden">展开菜单</button>
                 <button id="admin-logout-btn" class="text-sm text-red-500 hover:text-red-600">退出登录</button>
             </div>
         </div>
 
-        <div class="flex max-w-6xl mx-auto px-4 pb-12">
-            <aside id="admin-sidebar" class="bg-white shadow rounded-lg w-60 mr-4 transform -translate-x-full lg:translate-x-0 transition-transform duration-200">
+        <div class="flex max-w-6xl mx-auto px-4 pb-12 gap-4">
+            <aside id="admin-sidebar" class="bg-white shadow rounded-lg w-60 transform -translate-x-full lg:translate-x-0 transition-transform duration-200">
                 <div class="flex items-center justify-between p-4 border-b">
-                    <h3 class="text-lg font-semibold text-gray-800">管理菜单</h3>
-                    <button id="sidebar-close-btn" class="text-sm text-gray-500 hover:text-gray-700 lg:hidden">关闭</button>
+                    <h3 class="text-lg font-semibold text-gray-800">导航</h3>
+                    <button id="sidebar-close-btn" class="text-sm text-gray-500 hover:text-gray-700 lg:hidden">收起</button>
                 </div>
                 <nav class="p-4 space-y-2">
                     <button class="admin-nav-link w-full text-left px-3 py-2 rounded-md text-sm bg-gray-100 text-gray-800" data-panel="books">书籍管理</button>
@@ -63,14 +63,50 @@
 
             <main class="flex-1">
                 <div id="admin-panel-placeholder" class="bg-white shadow rounded-lg p-6 text-gray-600 text-sm">
-                    从左侧选择一个模块来查看数据。
+                    请选择左侧模块来查看或维护数据。
                 </div>
 
                 <section data-panel-content="books" class="hidden bg-white shadow rounded-lg p-6 flex flex-col">
+                    <div class="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-4 mb-4">
+                        <div>
+                            <h4 class="text-base font-semibold text-gray-800">原始书籍分页</h4>
+                            <p class="text-xs text-gray-500 mt-1">上传 PDF 文件，系统会逐页写入 book_page 表</p>
+                        </div>
+                        <form id="pdf-upload-form" class="mt-4 space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">PDF 文件</label>
+                                <input type="file" id="pdf-file" name="pdf" accept="application/pdf" required class="w-full text-sm text-gray-600">
+                            </div>
+                            <div class="grid gap-3 sm:grid-cols-2">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">书籍标题（可选）</label>
+                                    <input type="text" id="pdf-title" name="title" placeholder="默认为文件名" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">书籍 ID（可选）</label>
+                                    <input type="text" id="pdf-book-id" name="book_id" placeholder="例如 book_auto_001" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                            </div>
+                            <div class="grid gap-3 sm:grid-cols-2">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">默认词典 ID（可选）</label>
+                                    <input type="text" id="pdf-dictionary-id" name="default_dictionary_id" placeholder="例如 process_safety_dict" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">描述（可选）</label>
+                                    <input type="text" id="pdf-description" name="description" placeholder="简单说明来源" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                            </div>
+                            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                <p id="pdf-upload-status" class="text-xs text-gray-500 h-5"></p>
+                                <button type="submit" class="bg-blue-600 text-white text-sm px-4 py-2 rounded-md hover:bg-blue-700">开始上传</button>
+                            </div>
+                        </form>
+                    </div>
                     <div class="flex items-center justify-between mb-3">
                         <div>
                             <h3 class="text-lg font-semibold text-gray-800">书籍管理</h3>
-                            <p class="text-xs text-gray-500">查看当前所有书籍记录</p>
+                            <p class="text-xs text-gray-500">查看当前入库的书籍列表</p>
                         </div>
                         <button id="refresh-books" class="text-sm text-blue-600 hover:text-blue-500">刷新</button>
                     </div>
@@ -81,7 +117,7 @@
                     <div class="flex items-center justify-between mb-3">
                         <div>
                             <h3 class="text-lg font-semibold text-gray-800">词典管理</h3>
-                            <p a class="text-xs text-gray-500">查看词典与词条数量</p>
+                            <p class="text-xs text-gray-500">查看词典摘要（后续可扩展 CRUD）</p>
                         </div>
                         <button id="refresh-dictionaries" class="text-sm text-blue-600 hover:text-blue-500">刷新</button>
                     </div>
@@ -92,7 +128,7 @@
                     <div class="flex items-center justify-between mb-3">
                         <div>
                             <h3 class="text-lg font-semibold text-gray-800">用户管理</h3>
-                            <p class="text-xs text-gray-500">查看注册用户概况</p>
+                            <p class="text-xs text-gray-500">查看注册用户及阅读进度</p>
                         </div>
                         <button id="refresh-users" class="text-sm text-blue-600 hover:text-blue-500">刷新</button>
                     </div>

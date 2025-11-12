@@ -21,6 +21,9 @@ const sidebarCloseBtn = document.getElementById('sidebar-close-btn');
 const navLinks = document.querySelectorAll('.admin-nav-link');
 const panels = document.querySelectorAll('[data-panel-content]');
 const panelPlaceholder = document.getElementById('admin-panel-placeholder');
+const pdfUploadForm = document.getElementById('pdf-upload-form');
+const pdfUploadStatus = document.getElementById('pdf-upload-status');
+const pdfFileInput = document.getElementById('pdf-file');
 
 const ADMIN_TOKEN_KEY = 'admin_token';
 
@@ -131,6 +134,41 @@ function highlightNav(targetName) {
     });
 }
 
+function updatePdfUploadStatus(message, variant = 'info') {
+    if (!pdfUploadStatus) return;
+    pdfUploadStatus.textContent = message || '';
+    pdfUploadStatus.classList.remove('text-gray-500', 'text-red-500', 'text-green-600');
+    const colorClass = variant === 'error'
+        ? 'text-red-500'
+        : variant === 'success'
+            ? 'text-green-600'
+            : 'text-gray-500';
+    pdfUploadStatus.classList.add(colorClass);
+}
+
+async function uploadPdfViaApi(formData) {
+    const response = await fetch(`${API_BASE}/books/upload_pdf`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: formData
+    });
+    let data = {};
+    try {
+        data = await response.json();
+    } catch (error) {
+        // ignore, we will handle below
+    }
+    if (response.status === 401 || response.status === 403) {
+        clearAdminToken();
+        showLogin();
+        throw new Error('登录已过期，请重新登录');
+    }
+    if (!response.ok) {
+        throw new Error(data.error || `上传失败 (HTTP ${response.status})`);
+    }
+    return data;
+}
+
 async function showPanel(panelName) {
     let found = false;
     panels.forEach(panel => {
@@ -196,6 +234,26 @@ sidebarCloseBtn?.addEventListener('click', () => toggleSidebar(false));
 
 backBtn?.addEventListener('click', () => {
     window.location.href = 'index.html';
+});
+
+pdfUploadForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!pdfFileInput?.files?.length) {
+        updatePdfUploadStatus('请先选择要上传的 PDF 文件', 'error');
+        return;
+    }
+    updatePdfUploadStatus('正在上传并解析 PDF ，请稍候...');
+    const formData = new FormData(pdfUploadForm);
+    try {
+        const result = await uploadPdfViaApi(formData);
+        const title = result?.book?.title || '新书籍';
+        const pages = result?.book?.pageCount ?? '若干';
+        updatePdfUploadStatus(`成功导入《${title}》，共 ${pages} 页`, 'success');
+        pdfUploadForm.reset();
+        await refreshBooks();
+    } catch (error) {
+        updatePdfUploadStatus(error.message || '上传失败', 'error');
+    }
 });
 
 (function attemptAutoAdminLogin() {

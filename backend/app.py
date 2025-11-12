@@ -8,10 +8,15 @@ from flask_jwt_extended import (
     get_jwt,
     jwt_required
 )
+from werkzeug.utils import secure_filename
+from pypdf import PdfReader
 import bcrypt
 import os
 import json
 import re
+import html
+from io import BytesIO
+from pathlib import Path
 from datetime import timedelta
 from functools import wraps
 from dotenv import load_dotenv
@@ -112,6 +117,59 @@ def strip_tags(html: str) -> str:
     return TAG_RE.sub(' ', html or '')
 
 
+def _slugify(text: str) -> str:
+    base = (text or '').lower()
+    base = re.sub(r'[^a-z0-9]+', '_', base)
+    base = base.strip('_')
+    return base or 'book'
+
+
+def generate_unique_book_id(base_title: str) -> str:
+    slug = _slugify(base_title)
+    candidate = slug
+    counter = 1
+    while Book.query.get(candidate):
+        candidate = f'{slug}_{counter}'
+        counter += 1
+    return candidate
+
+
+def pdf_text_to_html(text: str, page_number: int) -> str:
+    sanitized = html.escape((text or '').replace('\x00', ' '))
+    paragraphs = []
+    for chunk in re.split(r'\n\s*\n', sanitized):
+        chunk = chunk.strip()
+        if not chunk:
+            continue
+        paragraphs.append(f"<p>{chunk.replace('\\n', '<br />')}</p>")
+    if not paragraphs:
+        paragraphs = ['<p class=\"text-gray-500\">（该页为空或未能识别文本）</p>']
+    body = ''.join(paragraphs)
+    return f'<article class=\"pdf-source-page\" data-origin-page=\"{page_number}\">{body}</article>'
+
+
+def extract_pdf_pages(file_storage) -> list[str]:
+    raw_bytes = file_storage.read()
+    if not raw_bytes:
+        raise ValueError('PDF 文件内容为空')
+    reader = PdfReader(BytesIO(raw_bytes))
+    if getattr(reader, 'is_encrypted', False):
+        try:
+            reader.decrypt('')
+        except Exception as exc:  # noqa: BLE001
+            raise ValueError('PDF 已加密，暂不支持解析') from exc
+    pages_html: list[str] = []
+    for idx, page in enumerate(reader.pages, start=1):
+        try:
+            text = page.extract_text() or ''
+        except Exception:  # noqa: BLE001
+            text = ''
+        pages_html.append(pdf_text_to_html(text, idx))
+    if not pages_html:
+        raise ValueError('未能从 PDF 中解析出任何页面')
+    return pages_html
+
+
 def serialize_user(user: User) -> dict:
     return {
         'id': user.id,
@@ -175,6 +233,81 @@ def admin_list_books():
             'chapterCount': len(book.chapters or [])
         })
     return jsonify({'items': items}), 200
+
+
+@admin_bp.post('/books/upload_pdf')
+@admin_required
+def admin_upload_pdf_book():
+    pdf_file = request.files.get('pdf') or request.files.get('file')
+    if not pdf_file or not pdf_file.filename:
+        return jsonify({'error': '请上传 PDF 文件'}), 400
+
+    filename = secure_filename(pdf_file.filename)
+    if not filename.lower().endswith('.pdf'):
+        return jsonify({'error': '仅支持上传 PDF 文件'}), 400
+
+    try:
+        pages_html = extract_pdf_pages(pdf_file)
+    except ValueError as exc:
+        return jsonify({'error': str(exc)}), 400
+    except Exception:  # noqa: BLE001
+        return jsonify({'error': '解析 PDF 时出现未知错误'}), 500
+
+    dictionary_id = (request.form.get('default_dictionary_id') or '').strip() or None
+    if dictionary_id and not Dictionary.query.get(dictionary_id):
+        return jsonify({'error': '默认词典 ID 不存在'}), 400
+
+    provided_book_id = (request.form.get('book_id') or '').strip()
+    inferred_title = Path(filename).stem or '自动导入书籍'
+    book_title = (request.form.get('title') or inferred_title).strip() or inferred_title
+    book_description = (request.form.get('description') or f'源自 PDF {filename} 的自动分页内容').strip() or f'源自 PDF {filename} 的自动分页内容'
+    book_id = provided_book_id or generate_unique_book_id(book_title)
+
+    if provided_book_id and Book.query.get(book_id):
+        return jsonify({'error': '书籍 ID 已存在，请更换 ID 或留空自动生成'}), 400
+
+    try:
+        book = Book(
+            id=book_id,
+            title=book_title,
+            description=book_description,
+            default_dictionary_id=dictionary_id
+        )
+        db.session.add(book)
+        db.session.flush()
+
+        chapter = BookChapter(
+            book=book,
+            chapter_number=1,
+            title=f'{book_title} - 原始分页',
+            summary='由管理员上传的 PDF 自动生成章节',
+            start_page=0
+        )
+        db.session.add(chapter)
+        db.session.flush()
+
+        for idx, html_content in enumerate(pages_html):
+            db.session.add(BookPage(
+                book=book,
+                chapter=chapter,
+                page_number=idx,
+                html_content=html_content
+            ))
+
+        db.session.commit()
+    except Exception:  # noqa: BLE001
+        db.session.rollback()
+        app.logger.exception('Admin PDF import failed')
+        return jsonify({'error': '写入数据库失败，请查看后端日志'}), 500
+
+    return jsonify({
+        'message': 'PDF 导入成功',
+        'book': {
+            'id': book.id,
+            'title': book.title,
+            'pageCount': len(pages_html)
+        }
+    }), 201
 
 
 @admin_bp.get('/dictionaries')
