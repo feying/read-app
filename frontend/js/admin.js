@@ -26,6 +26,7 @@ const pdfUploadStatus = document.getElementById('pdf-upload-status');
 const pdfFileInput = document.getElementById('pdf-file');
 
 const ADMIN_TOKEN_KEY = 'admin_token';
+const HTML_ESCAPE_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 
 function getAdminToken() {
     return localStorage.getItem(ADMIN_TOKEN_KEY);
@@ -38,6 +39,112 @@ function setAdminToken(token) {
 function clearAdminToken() {
     localStorage.removeItem(ADMIN_TOKEN_KEY);
 }
+
+function escapeHtml(value = '') {
+    return String(value).replace(/[&<>"']/g, (char) => HTML_ESCAPE_MAP[char] || char);
+}
+
+function renderBookSummaryList(items = []) {
+    if (!booksOutput) return;
+    if (!items.length) {
+        booksOutput.innerHTML = '<p class="text-gray-500 text-sm">No books yet</p>';
+        return;
+    }
+
+    const rows = items.map((book, index) => {
+        const safeTitle = escapeHtml((book && book.title) ? book.title : 'Untitled book');
+        const safeId = escapeHtml((book && book.id) ? book.id : 'unknown');
+        const safeDescription = escapeHtml((book && book.description) ? book.description : 'No description');
+        const safeDictionary = escapeHtml((book && book.defaultDictionaryId) ? book.defaultDictionaryId : 'Not set');
+        const rowStripe = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+
+        return `
+            <tr class="${rowStripe}">
+                <td class="align-top px-4 py-3">
+                    <p class="font-medium text-gray-900">${safeTitle}</p>
+                    <p class="text-xs text-gray-500 mt-1 break-all">Dictionary: ${safeDictionary}</p>
+                </td>
+                <td class="align-top px-4 py-3 text-sm font-mono text-gray-700 break-all">${safeId}</td>
+                <td class="align-top px-4 py-3 text-sm text-gray-700 leading-relaxed">${safeDescription}</td>
+                <td class="align-top px-4 py-3 text-sm">
+                    <button
+                        class="delete-book-btn text-red-600 hover:text-red-500 text-xs font-semibold"
+                        data-action="delete-book"
+                        data-book-id="${safeId}"
+                    >
+                        删除
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    booksOutput.innerHTML = `
+        <p class="text-sm text-gray-500 mb-3">Total ${items.length} books</p>
+        <div class="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm">
+            <table class="min-w-full text-left text-sm text-gray-800">
+                <thead class="bg-gray-100 text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    <tr>
+                        <th class="px-4 py-3">Title</th>
+                        <th class="px-4 py-3">Book ID</th>
+                        <th class="px-4 py-3">Description</th>
+                        <th class="px-4 py-3 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    ${rows}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+function hydrateExistingBookList() {
+    if (!booksOutput) return;
+    const raw = (booksOutput.textContent || '').trim();
+    if (!raw) return;
+    try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+            renderBookSummaryList(parsed);
+        } else if (parsed && Array.isArray(parsed.items)) {
+            renderBookSummaryList(parsed.items);
+        }
+    } catch (error) {
+        // ignore invalid JSON
+    }
+}
+
+hydrateExistingBookList();
+
+async function handleBookListClick(event) {
+    const deleteBtn = event.target.closest('[data-action="delete-book"]');
+    if (!deleteBtn) return;
+
+    const bookId = deleteBtn.dataset.bookId;
+    if (!bookId) return;
+
+    const confirmed = window.confirm(`确定要删除书籍「${bookId}」吗？
+该操作无法撤销。`);
+    if (!confirmed) {
+        return;
+    }
+
+    const originalText = deleteBtn.textContent;
+    deleteBtn.disabled = true;
+    deleteBtn.textContent = '删除中...';
+
+    try {
+        await adminDeleteBook(bookId);
+        await refreshBooks();
+    } catch (error) {
+        alert(error.message || '删除失败');
+    } finally {
+        deleteBtn.disabled = false;
+        deleteBtn.textContent = originalText;
+    }
+}
+
 
 function authHeaders(extra = {}) {
     const headers = { ...extra };
@@ -75,6 +182,29 @@ async function fetchAdminResource(path) {
     return response.json();
 }
 
+async function adminDeleteBook(bookId) {
+    const response = await fetch(`${API_BASE}/books/${encodeURIComponent(bookId)}`, {
+        method: 'DELETE',
+        headers: authHeaders()
+    });
+    let data = {};
+    try {
+        data = await response.json();
+    } catch (error) {
+        // ignore non-JSON responses
+    }
+    if (response.status === 401 || response.status === 403) {
+        clearAdminToken();
+        showLogin();
+        throw new Error('登录已过期，请重新登录');
+    }
+    if (!response.ok) {
+        const message = (data && data.error) || `删除失败 (HTTP ${response.status})`;
+        throw new Error(message);
+    }
+    return data;
+}
+
 function showDashboard(email) {
     identityLabel.textContent = email || '管理员';
     loginPanel.classList.add('hidden');
@@ -87,17 +217,19 @@ function showLogin() {
 }
 
 async function refreshBooks() {
-    booksOutput.textContent = '加载中...';
+    if (booksOutput) {
+        booksOutput.innerHTML = '<p class="text-gray-500 text-sm">Loading...</p>';
+    }
     try {
         const data = await fetchAdminResource('/books');
-        booksOutput.textContent = JSON.stringify(data.items, null, 2);
+        renderBookSummaryList(data.items || []);
     } catch (error) {
         booksOutput.textContent = error.message;
     }
 }
 
 async function refreshDictionaries() {
-    dictionariesOutput.textContent = '加载中...';
+    dictionariesOutput.textContent = 'Loading...';
     try {
         const data = await fetchAdminResource('/dictionaries');
         dictionariesOutput.textContent = JSON.stringify(data.items, null, 2);
@@ -107,7 +239,7 @@ async function refreshDictionaries() {
 }
 
 async function refreshUsers() {
-    usersOutput.textContent = '加载中...';
+    usersOutput.textContent = 'Loading...';
     try {
         const data = await fetchAdminResource('/users');
         usersOutput.textContent = JSON.stringify(data.items, null, 2);
@@ -222,6 +354,7 @@ logoutBtn?.addEventListener('click', () => {
 refreshBooksBtn?.addEventListener('click', refreshBooks);
 refreshDictionariesBtn?.addEventListener('click', refreshDictionaries);
 refreshUsersBtn?.addEventListener('click', refreshUsers);
+booksOutput?.addEventListener('click', handleBookListClick);
 navLinks.forEach(link => {
     link.addEventListener('click', async () => {
         const panelName = link.dataset.panel;

@@ -310,6 +310,42 @@ def admin_upload_pdf_book():
     }), 201
 
 
+@admin_bp.delete('/books/<book_id>')
+@admin_required
+def admin_delete_book(book_id: str):
+    book = Book.query.get(book_id)
+    if not book:
+        return jsonify({'error': '书籍不存在'}), 404
+
+    try:
+        removed_pages = BookPage.query.filter_by(book_id=book_id).delete(synchronize_session=False)
+        removed_chapters = BookChapter.query.filter_by(book_id=book_id).delete(synchronize_session=False)
+        affected_users = (
+            User.query.filter(User.current_book_id == book_id)
+            .update({
+                User.current_book_id: None,
+                User.current_page: 1,
+                User.reading_progress: None,
+            }, synchronize_session=False)
+        )
+        db.session.delete(book)
+        db.session.commit()
+    except Exception:  # noqa: BLE001
+        db.session.rollback()
+        app.logger.exception('Admin delete book failed')
+        return jsonify({'error': '删除书籍时发生错误'}), 500
+
+    return jsonify({
+        'message': '书籍已删除',
+        'book_id': book_id,
+        'removed': {
+            'pages': removed_pages,
+            'chapters': removed_chapters,
+            'affectedUsers': affected_users,
+        }
+    }), 200
+
+
 @admin_bp.get('/dictionaries')
 @admin_required
 def admin_list_dictionaries():
