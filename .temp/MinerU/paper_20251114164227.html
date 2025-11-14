@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang xml:lang>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>full</title>
+  <style>
+html {
+color: #1a1a1a;
+background-color: #fdfdfd;
+}
+body {
+margin: 0 auto;
+max-width: 36em;
+padding-left: 50px;
+padding-right: 50px;
+padding-top: 50px;
+padding-bottom: 50px;
+hyphens: auto;
+overflow-wrap: break-word;
+text-rendering: optimizeLegibility;
+font-kerning: normal;
+}
+@media (max-width: 600px) {
+body {
+font-size: 0.9em;
+padding: 12px;
+}
+h1 {
+font-size: 1.8em;
+}
+}
+@media print {
+html {
+background-color: white;
+}
+body {
+background-color: transparent;
+color: black;
+font-size: 12pt;
+}
+p, h2, h3 {
+orphans: 3;
+widows: 3;
+}
+h2, h3, h4 {
+page-break-after: avoid;
+}
+}
+p {
+margin: 1em 0;
+}
+a {
+color: #1a1a1a;
+}
+a:visited {
+color: #1a1a1a;
+}
+img {
+max-width: 100%;
+}
+svg {
+height: auto;
+max-width: 100%;
+}
+h1, h2, h3, h4, h5, h6 {
+margin-top: 1.4em;
+}
+h5, h6 {
+font-size: 1em;
+font-style: italic;
+}
+h6 {
+font-weight: normal;
+}
+ol, ul {
+padding-left: 1.7em;
+margin-top: 1em;
+}
+li > ol, li > ul {
+margin-top: 0;
+}
+blockquote {
+margin: 1em 0 1em 1.7em;
+padding-left: 1em;
+border-left: 2px solid #e6e6e6;
+color: #606060;
+}
+code {
+font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+font-size: 85%;
+margin: 0;
+hyphens: manual;
+}
+pre {
+margin: 1em 0;
+overflow: auto;
+}
+pre code {
+padding: 0;
+overflow: visible;
+overflow-wrap: normal;
+}
+.sourceCode {
+background-color: transparent;
+overflow: visible;
+}
+hr {
+border: none;
+border-top: 1px solid #1a1a1a;
+height: 1px;
+margin: 1em 0;
+}
+table {
+margin: 1em 0;
+border-collapse: collapse;
+width: 100%;
+overflow-x: auto;
+display: block;
+font-variant-numeric: lining-nums tabular-nums;
+}
+table caption {
+margin-bottom: 0.75em;
+}
+tbody {
+margin-top: 0.5em;
+border-top: 1px solid #1a1a1a;
+border-bottom: 1px solid #1a1a1a;
+}
+th {
+border-top: 1px solid #1a1a1a;
+padding: 0.25em 0.5em 0.25em 0.5em;
+}
+td {
+padding: 0.125em 0.5em 0.25em 0.5em;
+}
+header {
+margin-bottom: 4em;
+text-align: center;
+}
+#TOC li {
+list-style: none;
+}
+#TOC ul {
+padding-left: 1.3em;
+}
+#TOC > ul {
+padding-left: 0;
+}
+#TOC a:not(:hover) {
+text-decoration: none;
+}
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+
+ul.task-list[class]{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+font-size: inherit;
+width: 0.8em;
+margin: 0 0.8em 0.2em -1.6em;
+vertical-align: middle;
+}
+table {
+display: table; overflow: auto;
+max-width: 100%;
+border-collapse: collapse;
+page-break-inside: avoid;
+}
+table th {
+text-align: center;
+font-weight: bold;
+}
+table td,table th {
+border: 1px solid #dfe2e5;
+padding: 6px 13px;
+}
+table tr {
+background-color: #fff;
+border-top: 1px solid #c6cbd1;
+}
+table tr:nth-child(2n) {
+background-color: #f6f8fa;
+}
+</style>
+</head>
+<body>
+<p>介绍论文的写作背景、主要内容、写明本人撰写的章节、写作目的及实际指导意义。</p>
+<h1 id="写作背景">写作背景：</h1>
+<p>流程模拟技术在石油化工过程系统设计与安全评估中具有重要的工程应用价值，其中稳态模拟通过建立代数方程组描述系统平衡状态下的物质与能量守恒关系，而动态模拟则基于微分-代数方程组刻画系统在时域内由初始扰动到新稳态的演化过程。</p>
+<p>石油化工装置最常用的系统安全保护设备是安全阀，安全阀尺寸的合理选择直接关系到装置的系统安全。安全阀选型通常是依据不同异常工况下泄放量的最大值选取。火灾工况是安全阀最大泄放量分析中必然遇到的工况，火灾发生时，热负荷大，通常要及时切断上下游物料，造成全厂或部分区域停车，是石化装置异常工况分析的重点。</p>
+<h1 id="主要内容">主要内容：</h1>
+<p>本工作采用Aspen HYSYS
+Dynamic流程模拟软件，建立脱丁烷精馏塔系在外部池火灾时的动态过程，定量直观的建立工艺参数随时间的变化过程，并对不同尺寸、不同类型的安全阀对泄放过程的影响做了对比分析。</p>
+<h1 id="写明本人撰写的章节">写明本人撰写的章节：</h1>
+<p>本人完成了选题、模型搭建、动态模拟、数据整理，结论分析，等主要内容。</p>
+<p>另外两位同时提供了校审意见，火灾泄放公式选择验证。</p>
+<h1 id="写作目的及实际指导意义">写作目的及实际指导意义：</h1>
+<p>常见精馏塔系统，由塔器、罐、换热器、泵等设备组成。具有设备数量多，种类多，操作工况复杂，各种设备作用相互耦合，很难通过简单的公式确定精馏塔系统的动态泄放过程。工程上，常见的安全阀泄放过程计算，是通过特定的假设来描述整个泄放过程，通常计算的泄放量容易过于保守，且不能代表整个泄放过程。动态模拟通过建立严格的热力学模型，严格物性计算，获得系统的泄放特性随时间的动态变化过程，能够更加直观和定量的设计和优化系统性能，如安全阀尺寸选型和不同时刻负荷的确定，进一步为设备设计、泄放方案、火灾应急处置等工程应用场景提供技术和理论支持。</p>
+</body>
+</html>

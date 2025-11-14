@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang xml:lang>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>full</title>
+  <style>
+html {
+color: #1a1a1a;
+background-color: #fdfdfd;
+}
+body {
+margin: 0 auto;
+max-width: 36em;
+padding-left: 50px;
+padding-right: 50px;
+padding-top: 50px;
+padding-bottom: 50px;
+hyphens: auto;
+overflow-wrap: break-word;
+text-rendering: optimizeLegibility;
+font-kerning: normal;
+}
+@media (max-width: 600px) {
+body {
+font-size: 0.9em;
+padding: 12px;
+}
+h1 {
+font-size: 1.8em;
+}
+}
+@media print {
+html {
+background-color: white;
+}
+body {
+background-color: transparent;
+color: black;
+font-size: 12pt;
+}
+p, h2, h3 {
+orphans: 3;
+widows: 3;
+}
+h2, h3, h4 {
+page-break-after: avoid;
+}
+}
+p {
+margin: 1em 0;
+}
+a {
+color: #1a1a1a;
+}
+a:visited {
+color: #1a1a1a;
+}
+img {
+max-width: 100%;
+}
+svg {
+height: auto;
+max-width: 100%;
+}
+h1, h2, h3, h4, h5, h6 {
+margin-top: 1.4em;
+}
+h5, h6 {
+font-size: 1em;
+font-style: italic;
+}
+h6 {
+font-weight: normal;
+}
+ol, ul {
+padding-left: 1.7em;
+margin-top: 1em;
+}
+li > ol, li > ul {
+margin-top: 0;
+}
+blockquote {
+margin: 1em 0 1em 1.7em;
+padding-left: 1em;
+border-left: 2px solid #e6e6e6;
+color: #606060;
+}
+code {
+font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+font-size: 85%;
+margin: 0;
+hyphens: manual;
+}
+pre {
+margin: 1em 0;
+overflow: auto;
+}
+pre code {
+padding: 0;
+overflow: visible;
+overflow-wrap: normal;
+}
+.sourceCode {
+background-color: transparent;
+overflow: visible;
+}
+hr {
+border: none;
+border-top: 1px solid #1a1a1a;
+height: 1px;
+margin: 1em 0;
+}
+table {
+margin: 1em 0;
+border-collapse: collapse;
+width: 100%;
+overflow-x: auto;
+display: block;
+font-variant-numeric: lining-nums tabular-nums;
+}
+table caption {
+margin-bottom: 0.75em;
+}
+tbody {
+margin-top: 0.5em;
+border-top: 1px solid #1a1a1a;
+border-bottom: 1px solid #1a1a1a;
+}
+th {
+border-top: 1px solid #1a1a1a;
+padding: 0.25em 0.5em 0.25em 0.5em;
+}
+td {
+padding: 0.125em 0.5em 0.25em 0.5em;
+}
+header {
+margin-bottom: 4em;
+text-align: center;
+}
+#TOC li {
+list-style: none;
+}
+#TOC ul {
+padding-left: 1.3em;
+}
+#TOC > ul {
+padding-left: 0;
+}
+#TOC a:not(:hover) {
+text-decoration: none;
+}
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+
+ul.task-list[class]{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+font-size: inherit;
+width: 0.8em;
+margin: 0 0.8em 0.2em -1.6em;
+vertical-align: middle;
+}
+table {
+display: table; overflow: auto;
+max-width: 100%;
+border-collapse: collapse;
+page-break-inside: avoid;
+}
+table th {
+text-align: center;
+font-weight: bold;
+}
+table td,table th {
+border: 1px solid #dfe2e5;
+padding: 6px 13px;
+}
+table tr {
+background-color: #fff;
+border-top: 1px solid #c6cbd1;
+}
+table tr:nth-child(2n) {
+background-color: #f6f8fa;
+}
+</style>
+</head>
+<body>
+<h1 id="sizing-for-critical-flow">5.6.3 Sizing for Critical Flow</h1>
+<h1 id="general">5.6.3.1 General</h1>
+<p>5.6.3.1.1 Pressure-relief devices in gas or vapor service that
+operate at critical flow conditions (see 5.6.2) may be sized using
+Equation (2) through Equation (7). Each of the equations may be used to
+calculate the effective discharge area,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>
+, required to achieve a required flow rate through a pressure-relief
+device. A PRV that has an effective discharge area equal to or greater
+than the calculated value of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>
+is then chosen for the application.</p>
+<p>In USC units:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>=</mo><mfrac><mi>W</mi><mrow><mi>C</mi><msub><mi>K</mi><mi mathvariant="normal">d</mi></msub><msub><mi>P</mi><mn>1</mn></msub><msub><mi>K</mi><mi mathvariant="normal">b</mi></msub><msub><mi>K</mi><mi mathvariant="normal">c</mi></msub></mrow></mfrac><msqrt><mfrac><mrow><mi>T</mi><mi>Z</mi></mrow><mi>M</mi></mfrac></msqrt></mrow><annotation encoding="application/x-tex">
+A = \frac {W}{C K _ {\mathrm {d}} P _ {1} K _ {\mathrm {b}} K _ {\mathrm {c}}} \sqrt {\frac {T Z}{M}} \tag {2}
+</annotation></semantics></math></p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>=</mo><mfrac><mrow><mi>V</mi><msqrt><mrow><mi>T</mi><mi>Z</mi><mi>M</mi></mrow></msqrt></mrow><mrow><mn>6</mn><mi>.</mi><mn>3</mn><mn>2</mn><mi>C</mi><msub><mi>K</mi><mi mathvariant="normal">d</mi></msub><msub><mi>P</mi><mn>1</mn></msub><msub><mi>K</mi><mi mathvariant="normal">b</mi></msub><msub><mi>K</mi><mi mathvariant="normal">c</mi></msub></mrow></mfrac></mrow><annotation encoding="application/x-tex">
+A = \frac {V \sqrt {T Z M}}{6 . 3 2 C K _ {\mathrm {d}} P _ {1} K _ {\mathrm {b}} K _ {\mathrm {c}}} \tag {3}
+</annotation></semantics></math></p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>=</mo><mfrac><mrow><mi>V</mi><msqrt><mrow><mi>T</mi><mi>Z</mi><msub><mi>G</mi><mi mathvariant="normal">v</mi></msub></mrow></msqrt></mrow><mrow><mn>1</mn><mi>.</mi><mn>1</mn><mn>7</mn><mn>5</mn><mi>C</mi><msub><mi>K</mi><mi mathvariant="normal">d</mi></msub><msub><mi>P</mi><mn>1</mn></msub><msub><mi>K</mi><mi mathvariant="normal">b</mi></msub><msub><mi>K</mi><mi mathvariant="normal">c</mi></msub></mrow></mfrac></mrow><annotation encoding="application/x-tex">
+A = \frac {V \sqrt {T Z G _ {\mathrm {v}}}}{1 . 1 7 5 C K _ {\mathrm {d}} P _ {1} K _ {\mathrm {b}} K _ {\mathrm {c}}} \tag {4}
+</annotation></semantics></math></p>
+<p>In SI units:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>=</mo><mfrac><mi>W</mi><mrow><mi>C</mi><msub><mi>K</mi><mi mathvariant="normal">d</mi></msub><msub><mi>P</mi><mn>1</mn></msub><msub><mi>K</mi><mi mathvariant="normal">b</mi></msub><msub><mi>K</mi><mi mathvariant="normal">c</mi></msub></mrow></mfrac><msqrt><mfrac><mrow><mi>T</mi><mi>Z</mi></mrow><mi>M</mi></mfrac></msqrt></mrow><annotation encoding="application/x-tex">
+A = \frac {W}{C K _ {\mathrm {d}} P _ {1} K _ {\mathrm {b}} K _ {\mathrm {c}}} \sqrt {\frac {T Z}{M}} \tag {5}
+</annotation></semantics></math></p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>=</mo><mfrac><mrow><mn>2</mn><mi>.</mi><mn>6</mn><mn>7</mn><mn>6</mn><mo>×</mo><mi>V</mi><msqrt><mrow><mi>T</mi><mi>Z</mi><mi>M</mi></mrow></msqrt></mrow><mrow><mi>C</mi><msub><mi>K</mi><mi mathvariant="normal">d</mi></msub><msub><mi>P</mi><mn>1</mn></msub><msub><mi>K</mi><mi mathvariant="normal">b</mi></msub><msub><mi>K</mi><mi mathvariant="normal">c</mi></msub></mrow></mfrac></mrow><annotation encoding="application/x-tex">
+A = \frac {2 . 6 7 6 \times V \sqrt {T Z M}}{C K _ {\mathrm {d}} P _ {1} K _ {\mathrm {b}} K _ {\mathrm {c}}} \tag {6}
+</annotation></semantics></math></p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>=</mo><mfrac><mrow><mn>1</mn><mn>4</mn><mi>.</mi><mn>4</mn><mn>1</mn><mo>×</mo><mi>V</mi><msqrt><mrow><mi>T</mi><mi>Z</mi><msub><mi>G</mi><mi mathvariant="normal">v</mi></msub></mrow></msqrt></mrow><mrow><mi>C</mi><msub><mi>K</mi><mi mathvariant="normal">d</mi></msub><msub><mi>P</mi><mn>1</mn></msub><msub><mi>K</mi><mi mathvariant="normal">b</mi></msub><msub><mi>K</mi><mi mathvariant="normal">c</mi></msub></mrow></mfrac></mrow><annotation encoding="application/x-tex">
+A = \frac {1 4 . 4 1 \times V \sqrt {T Z G _ {\mathrm {v}}}}{C K _ {\mathrm {d}} P _ {1} K _ {\mathrm {b}} K _ {\mathrm {c}}} \tag {7}
+</annotation></semantics></math></p>
+<p>where</p>
+<p><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>
+is the required effective discharge area of the device, in.2
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><msup><mrow><mi mathvariant="normal">m</mi><mi mathvariant="normal">m</mi></mrow><mn>2</mn></msup><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(\mathrm{mm}^2)</annotation></semantics></math>
+(see 3.20);<br />
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>W</mi><annotation encoding="application/x-tex">W</annotation></semantics></math>
+is the required flow through the device,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">l</mi><mi mathvariant="normal">b</mi><mi mathvariant="normal">/</mi><mi mathvariant="normal">h</mi></mrow><annotation encoding="application/x-tex">\mathrm{lb / h}</annotation></semantics></math>
+(kg/h);<br />
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>C</mi><annotation encoding="application/x-tex">C</annotation></semantics></math>
+is a function of the ratio of the ideal gas specific heats
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>k</mi><mo>=</mo><msub><mi>C</mi><mi mathvariant="normal">p</mi></msub><mi>/</mi><msub><mi>C</mi><mi mathvariant="normal">v</mi></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(k = C_{\mathrm{p}} / C_{\mathrm{v}})</annotation></semantics></math>
+of the gas or vapor at inlet relieving temperature.</p>
+<p>The coefficient,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>C</mi><annotation encoding="application/x-tex">C</annotation></semantics></math>
+, is determined as follows.</p>
+<p>In USC units [for use in Equation (2) through Equation (4) only]:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>C</mi><mo>=</mo><mn>5</mn><mn>2</mn><mn>0</mn><msqrt><mrow><mi>k</mi><msup><mrow><mo stretchy="true" form="prefix">(</mo><mfrac><mn>2</mn><mrow><mi>k</mi><mo>+</mo><mn>1</mn></mrow></mfrac><mo stretchy="true" form="postfix">)</mo></mrow><mfrac><mrow><mo stretchy="false" form="prefix">(</mo><mi>k</mi><mo>+</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo></mrow><mrow><mo stretchy="false" form="prefix">(</mo><mi>k</mi><mo>−</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo></mrow></mfrac></msup></mrow></msqrt></mrow><annotation encoding="application/x-tex">
+C = 5 2 0 \sqrt {k \left(\frac {2}{k + 1}\right) ^ {\frac {(k + 1)}{(k - 1)}}} \tag {8}
+</annotation></semantics></math></p>
+<p>In SI units [for use in Equation (5) through Equation (7) only]:</p>
+</body>
+</html>
