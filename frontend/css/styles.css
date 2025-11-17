@@ -4,16 +4,25 @@ html {
     background-color: #fdfdfd;
 }
 body {
-    margin: 0 auto;
-    max-width: 210mm;
+    margin: 0;
     padding-left: 50px;
     padding-right: 50px;
     padding-top: 50px;
     padding-bottom: 50px;
+    display: flex;
+    justify-content: center;
+    width: 100%;
     hyphens: auto;
     overflow-wrap: break-word;
     text-rendering: optimizeLegibility;
     font-kerning: normal;
+}
+
+#content {
+    width: 210mm;
+    max-width: 210mm;
+    min-width: 210mm;   /* 保持 A4 宽度，即使内容很少 */
+    flex: 0 0 210mm;    /* 在 flex 容器中固定宽度，避免收缩 */
 }
 @media (max-width: 600px) {
     body {
