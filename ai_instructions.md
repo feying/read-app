@@ -11,6 +11,13 @@
 - **内容来源**：管理员通过 `frontend/admin.html` 登录（凭 `.env` 中的 `ADMIN_EMAIL/ADMIN_PASSWORD`），可上传 PDF，经 `PdfReader` 解析成 `Book`/`BookPage` 数据。
 - **基础数据**：`seed.py` 会写入样例书籍与术语表（过程安全主题），方便开发期验证流程。
 - **用户状态**：所有 `/api` 请求使用 JWT 保护，前端 `localStorage` 存储 `auth_token` 和 `current_user`，阅读进度可与服务器同步。
+- **核心交互（点击翻译）**：
+  - 拆词：`frontend/js/utils.js` 的 `parseContent` 把 h1~h6/p/td 文本拆分成 `.word-container > .word`，为点击译词提供 DOM 结构。
+  - 事件：`frontend/js/main.js` 在 `contentDiv` 上监听点击：
+    - 单击 `.word`：插入/移除 `.translation`，显示当前词典静态释义并保存进度。
+    - 双击 `.translation`：调用 `callDeepSeekAPI` 进行 AI 翻译，更新译文并标记 `ai-enhanced`。
+    - 三击 `.translation`：调用 AI 术语解释弹窗。
+  - 样式：`frontend/css/styles.css` 定义 `.word`、`.translation`、`translation-pos-*`，支持翻译显示上/左/右三种位置。默认 `.word-container` 为 `inline-flex` 纵向堆叠（翻译在上、单词在下），翻译占位撑开行高，避免与上一行重叠。
 
 ## 请求 Codex 时的提示
 1. **先看文档**：`readme.md` 和 `DATABASE_SETUP.md` 记录运行步骤、数据库准备及常见问题。
