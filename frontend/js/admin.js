@@ -56,6 +56,7 @@ function renderBookSummaryList(items = []) {
         const safeId = escapeHtml((book && book.id) ? book.id : 'unknown');
         const safeDescription = escapeHtml((book && book.description) ? book.description : 'No description');
         const safeDictionary = escapeHtml((book && book.defaultDictionaryId) ? book.defaultDictionaryId : 'Not set');
+        const safeOrigin = escapeHtml((book && book.origin) ? book.origin : 'default');
         const rowStripe = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
 
         return `
@@ -65,6 +66,7 @@ function renderBookSummaryList(items = []) {
                     <p class="text-xs text-gray-500 mt-1 break-all">Dictionary: ${safeDictionary}</p>
                 </td>
                 <td class="align-top px-4 py-3 text-sm font-mono text-gray-700 break-all">${safeId}</td>
+                <td class="align-top px-4 py-3 text-sm text-gray-700">${safeOrigin}</td>
                 <td class="align-top px-4 py-3 text-sm text-gray-700 leading-relaxed">${safeDescription}</td>
                 <td class="align-top px-4 py-3 text-sm">
                     <button
@@ -87,6 +89,7 @@ function renderBookSummaryList(items = []) {
                     <tr>
                         <th class="px-4 py-3">Title</th>
                         <th class="px-4 py-3">Book ID</th>
+                        <th class="px-4 py-3">Origin</th>
                         <th class="px-4 py-3">Description</th>
                         <th class="px-4 py-3 text-right">Actions</th>
                     </tr>
@@ -125,7 +128,7 @@ async function handleBookListClick(event) {
     if (!bookId) return;
 
     const confirmed = window.confirm(`确定要删除书籍「${bookId}」吗？
-该操作无法撤销。`);
+此操作无法撤销。`);
     if (!confirmed) {
         return;
     }
@@ -144,7 +147,6 @@ async function handleBookListClick(event) {
         deleteBtn.textContent = originalText;
     }
 }
-
 
 function authHeaders(extra = {}) {
     const headers = { ...extra };

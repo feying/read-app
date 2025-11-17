@@ -34,6 +34,7 @@ book_blueprints = [
         'title': 'Process Safety Primer',
         'description': '面向工程师的流程安全入门读物，涵盖泄压、联锁与事故响应。',
         'defaultDictionaryId': 'process_safety_dict',
+        'origin': 'default',
         'chapters': [
             {
                 'title': 'Chapter 1 · Relief Philosophy',
@@ -102,7 +103,8 @@ def seed_database():
                 id=book_data['id'],
                 title=book_data['title'],
                 description=book_data['description'],
-                default_dictionary_id=book_data['defaultDictionaryId']
+                default_dictionary_id=book_data['defaultDictionaryId'],
+                origin=book_data.get('origin', 'default')
             )
             db.session.add(book)
             db.session.flush()

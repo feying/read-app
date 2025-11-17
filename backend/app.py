@@ -88,6 +88,7 @@ class Book(db.Model):
     title = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text)
     default_dictionary_id = db.Column(db.String(100), db.ForeignKey('dictionary.id'))
+    origin = db.Column(db.String(50), nullable=False, default='default')
     pages = db.relationship('BookPage', backref='book', lazy='dynamic', order_by='BookPage.page_number')
     chapters = db.relationship('BookChapter', backref='book', lazy=True, order_by='BookChapter.chapter_number')
 
@@ -196,6 +197,7 @@ def serialize_book_metadata(book: Book) -> dict:
         'title': book.title,
         'description': book.description,
         'defaultDictionaryId': book.default_dictionary_id,
+        'origin': book.origin or 'default',
         'pageCount': page_count,
         'chapters': chapters
     }
@@ -229,6 +231,7 @@ def admin_list_books():
             'title': book.title,
             'description': book.description,
             'defaultDictionaryId': book.default_dictionary_id,
+            'origin': book.origin or 'default',
             'pageCount': book.pages.count() if hasattr(book.pages, 'count') else len(book.pages or []),
             'chapterCount': len(book.chapters or [])
         })
@@ -262,6 +265,8 @@ def admin_upload_pdf_book():
     book_title = (request.form.get('title') or inferred_title).strip() or inferred_title
     book_description = (request.form.get('description') or f'源自 PDF {filename} 的自动分页内容').strip() or f'源自 PDF {filename} 的自动分页内容'
     book_id = provided_book_id or generate_unique_book_id(book_title)
+    origin_value = (request.form.get('origin') or '').strip() or 'default'
+    origin = origin_value[:50] or 'default'
 
     if provided_book_id and Book.query.get(book_id):
         return jsonify({'error': '书籍 ID 已存在，请更换 ID 或留空自动生成'}), 400
@@ -271,7 +276,8 @@ def admin_upload_pdf_book():
             id=book_id,
             title=book_title,
             description=book_description,
-            default_dictionary_id=dictionary_id
+            default_dictionary_id=dictionary_id,
+            origin=origin
         )
         db.session.add(book)
         db.session.flush()
