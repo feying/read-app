@@ -1,0 +1,81 @@
+/* 自定义样式 */
+body { background-color: #f0f2f5; }
+.page {
+    width: 210mm;
+    min-height: 297mm;
+    font-family: 'Lora', serif;
+    --font-chinese: 'Noto Serif SC', serif;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+}
+#content {
+    flex-grow: 1;
+}
+.word-container {
+    display: inline-flex;
+    flex-direction: column;
+    text-align: center;
+    vertical-align: bottom;
+    margin: 0;
+    padding-bottom: 4px;
+}
+.word {
+    cursor: pointer;
+    padding: 1px 2px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+.word:hover { background-color: #e0e7ff; }
+.translation {
+    font-family: var(--font-chinese);
+    font-size: 0.8em;
+    color: #3b82f6;
+    padding: 2px 4px;
+    white-space: nowrap;
+    user-select: none;
+    display: inline-block;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.2s, color 0.2s;
+}
+.translation:hover { background-color: #eff6ff; }
+.translation.ai-enhanced { color: #8b5cf6; }
+#content h3, #content h4, #content h5, #content h6 { margin-top: 1.5em; margin-bottom: 0.75em; font-weight: bold; line-height: 1.4; }
+#content h3 { font-size: 1.5em; }
+#content h4 { font-size: 1.25em; }
+#content h5 { font-size: 1.1em; }
+#content p { margin-bottom: 1em; text-align: left; }
+table { width: 100%; border-collapse: collapse; margin-top: 1em; margin-bottom: 1.5em; font-size: 0.9em; line-height: 1.6; }
+th, td { border: 1px solid #d1d5db; padding: 8px 12px; text-align: left; vertical-align: top; }
+th { background-color: #f3f4f6; font-weight: bold; }
+.summarize-btn-container { display: none; text-align: right; margin-top: -0.5em; margin-bottom: 1em; }
+.summarize-btn { cursor: pointer; font-size: 0.8em; font-family: var(--font-chinese); color: #4f46e5; background-color: #eef2ff; padding: 4px 10px; border-radius: 9999px; transition: all 0.2s ease-in-out; border: 1px solid transparent; }
+.summarize-btn:hover { background-color: #e0e7ff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-color: #c7d2fe; }
+#ai-response { min-height: 128px; }
+
+/* 打印样式 */
+@media print {
+    .page {
+        width: 210mm;
+        height: auto;
+        min-height: calc(297mm - 30mm);
+        padding: 15mm !important;
+        box-sizing: border-box;
+    }
+    .page:last-child {
+        page-break-after: auto !important;
+    }
+    @page {
+        margin: 0;
+    }
+    body {
+        margin: 0;
+    }
+    body > * {
+        display: none !important;
+    }
+    #print-container {
+        display: block !important;
+    }
+}

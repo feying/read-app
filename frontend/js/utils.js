@@ -81,7 +81,7 @@ function parseContent(targetDiv, contentHtml, isForPrint = false, pageWordCounte
         }
     };
 
-    const textBlocks = targetDiv.querySelectorAll('h3, h4, h5, h6, p, td');
+    const textBlocks = targetDiv.querySelectorAll('h1, h2, h3, h4, h5, h6, p, td');
     textBlocks.forEach(block => {
         if (block.tagName === 'P' && !isForPrint) {
             const container = document.createElement('div');
