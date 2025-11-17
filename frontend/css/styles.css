@@ -19,6 +19,12 @@ body {
 }
 
 #content {
+    /* 隔离 Tailwind 等全局样式，应用原 MinerU 基础排版 */
+    all: revert;
+    font-family: "Times New Roman", serif;
+    font-size: 16px;
+    line-height: 1.6;
+    color: #1a1a1a;
     width: 210mm;
     max-width: 210mm;
     min-width: 210mm;   /* 保持 A4 宽度，即使内容很少 */
