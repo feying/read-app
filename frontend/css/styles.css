@@ -4,9 +4,11 @@ html {
     background-color: #fdfdfd;
 }
 body {
-    margin: 0 auto;
-    max-width: 55em;
-    padding: 50px;
+    margin: 0;
+    padding: 24px;
+    display: flex;
+    justify-content: center; /* 视口水平居中内容 */
+    width: 100%;
     hyphens: auto;
     overflow-wrap: break-word;
     text-rendering: optimizeLegibility;
@@ -40,6 +42,11 @@ svg { height: auto; max-width: 100%; }
 h1, h2, h3, h4, h5, h6 { margin-top: 1.4em; }
 h5, h6 { font-size: 1em; font-style: italic; }
 h6 { font-weight: normal; }
+/* 限制正文宽度并保持居中 */
+#content {
+    width: 100%;
+    max-width: 210mm;
+}
 ol, ul { padding-left: 1.7em; margin-top: 1em; }
 li > ol, li > ul { margin-top: 0; }
 blockquote {
