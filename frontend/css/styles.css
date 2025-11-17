@@ -206,7 +206,7 @@ ul.task-list li input[type="checkbox"] {
 }
 .word {
     cursor: pointer;
-    padding: 1px 2px;
+    padding: 0 0.1px;
     border-radius: 4px;
     transition: background-color 0.2s;
 }
