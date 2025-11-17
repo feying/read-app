@@ -24,6 +24,16 @@ const panelPlaceholder = document.getElementById('admin-panel-placeholder');
 const pdfUploadForm = document.getElementById('pdf-upload-form');
 const pdfUploadStatus = document.getElementById('pdf-upload-status');
 const pdfFileInput = document.getElementById('pdf-file');
+const pdfOriginSelect = document.getElementById('pdf-origin');
+const pdfTitleInput = document.getElementById('pdf-title');
+const pdfBookIdInput = document.getElementById('pdf-book-id');
+const pdfDictInput = document.getElementById('pdf-dictionary-id');
+const pdfDescInput = document.getElementById('pdf-description');
+const pdfOriginSelect = document.getElementById('pdf-origin');
+const pdfTitleInput = document.getElementById('pdf-title');
+const pdfBookIdInput = document.getElementById('pdf-book-id');
+const pdfDictInput = document.getElementById('pdf-dictionary-id');
+const pdfDescInput = document.getElementById('pdf-description');
 
 const ADMIN_TOKEN_KEY = 'admin_token';
 const HTML_ESCAPE_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -373,17 +383,59 @@ backBtn?.addEventListener('click', () => {
 
 pdfUploadForm?.addEventListener('submit', async (event) => {
     event.preventDefault();
-    if (!pdfFileInput?.files?.length) {
-        updatePdfUploadStatus('请先选择要上传的 PDF 文件', 'error');
+    const originValue = (pdfOriginSelect?.value || 'default').trim() || 'default';
+    const files = Array.from(pdfFileInput?.files || []);
+    if (!files.length) {
+        updatePdfUploadStatus('请选择要上传的文件', 'error');
         return;
     }
-    updatePdfUploadStatus('正在上传并解析 PDF ，请稍候...');
-    const formData = new FormData(pdfUploadForm);
+
+    const isMinerU = originValue.toLowerCase() === 'mineru';
+    if (isMinerU) {
+        const invalid = files.find(f => {
+            const name = (f.name || '').toLowerCase();
+            return !name.endsWith('.html') && !name.endsWith('.htm');
+        });
+        if (invalid) {
+            updatePdfUploadStatus('MinerU 仅支持上传 HTML 文件', 'error');
+            return;
+        }
+        updatePdfUploadStatus('正在上传 HTML 内容，请稍候...', 'info');
+    } else {
+        const invalid = files.find(f => !(f.name || '').toLowerCase().endsWith('.pdf'));
+        if (invalid) {
+            updatePdfUploadStatus('default 模式仅支持 PDF 文件', 'error');
+            return;
+        }
+        updatePdfUploadStatus('正在上传 PDF 内容，请稍候...', 'info');
+    }
+
+    let formData;
+    if (isMinerU) {
+        const sorted = files.sort((a, b) => {
+            const num = (name) => { const m = /\d+/.exec(name); return m ? parseInt(m[0], 10) : Number.MAX_SAFE_INTEGER; };
+            const an = num((a.name || '').toLowerCase());
+            const bn = num((b.name || '').toLowerCase());
+            if (an === bn) return (a.name || '').localeCompare(b.name || '');
+            return an - bn;
+        });
+        formData = new FormData();
+        formData.set('origin', originValue);
+        formData.set('title', pdfTitleInput?.value || '');
+        formData.set('book_id', pdfBookIdInput?.value || '');
+        formData.set('default_dictionary_id', pdfDictInput?.value || '');
+        formData.set('description', pdfDescInput?.value || '');
+        sorted.forEach(file => formData.append('file', file));
+    } else {
+        formData = new FormData(pdfUploadForm);
+        formData.set('origin', originValue);
+    }
+
     try {
         const result = await uploadPdfViaApi(formData);
         const title = result?.book?.title || '新书籍';
         const pages = result?.book?.pageCount ?? '若干';
-        updatePdfUploadStatus(`成功导入《${title}》，共 ${pages} 页`, 'success');
+        updatePdfUploadStatus(`成功导入「${title}」，共 ${pages} 页`, 'success');
         pdfUploadForm.reset();
         await refreshBooks();
     } catch (error) {

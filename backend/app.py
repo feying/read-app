@@ -241,33 +241,83 @@ def admin_list_books():
 @admin_bp.post('/books/upload_pdf')
 @admin_required
 def admin_upload_pdf_book():
-    pdf_file = request.files.get('pdf') or request.files.get('file')
-    if not pdf_file or not pdf_file.filename:
-        return jsonify({'error': '请上传 PDF 文件'}), 400
+    origin_value = (request.form.get('origin') or '').strip() or 'default'
+    origin = origin_value[:50] or 'default'
+    origin_lower = origin.lower()
 
-    filename = secure_filename(pdf_file.filename)
-    if not filename.lower().endswith('.pdf'):
-        return jsonify({'error': '仅支持上传 PDF 文件'}), 400
-
-    try:
-        pages_html = extract_pdf_pages(pdf_file)
-    except ValueError as exc:
-        return jsonify({'error': str(exc)}), 400
-    except Exception:  # noqa: BLE001
-        return jsonify({'error': '解析 PDF 时出现未知错误'}), 500
+    files = request.files.getlist('file') or []
+    if not files:
+        return jsonify({'error': '请上传文件'}), 400
 
     dictionary_id = (request.form.get('default_dictionary_id') or '').strip() or None
     if dictionary_id and not Dictionary.query.get(dictionary_id):
         return jsonify({'error': '默认词典 ID 不存在'}), 400
 
     provided_book_id = (request.form.get('book_id') or '').strip()
-    inferred_title = Path(filename).stem or '自动导入书籍'
-    book_title = (request.form.get('title') or inferred_title).strip() or inferred_title
-    book_description = (request.form.get('description') or f'源自 PDF {filename} 的自动分页内容').strip() or f'源自 PDF {filename} 的自动分页内容'
-    book_id = provided_book_id or generate_unique_book_id(book_title)
-    origin_value = (request.form.get('origin') or '').strip() or 'default'
-    origin = origin_value[:50] or 'default'
 
+    pages_html = []
+    chapter_title = ''
+    chapter_summary = ''
+
+    if origin_lower == 'mineru':
+        bad = [f for f in files if not (f.filename or '').lower().endswith(('.html', '.htm'))]
+        if bad:
+            return jsonify({'error': 'MinerU 仅支持上传 HTML 文件'}), 400
+
+        def _num_key(name: str):
+            lowered = (name or '').lower()
+            m = re.search(r'(\d+)', lowered)
+            num = int(m.group(1)) if m else 10**9
+            return (num, lowered)
+
+        files.sort(key=lambda f: _num_key(f.filename))
+
+        first_name = secure_filename(files[0].filename or '') or '导入文件'
+        inferred_title = Path(first_name).stem or '自动导入的图书'
+        book_title = (request.form.get('title') or inferred_title).strip() or inferred_title
+        book_description = (request.form.get('description') or f'来源 HTML {first_name} 的内容').strip() or f'来源 HTML {first_name} 的内容'
+        chapter_title = f'{book_title} - MinerU 导入'
+        chapter_summary = '管理员通过 MinerU HTML 导入的内容'
+
+        chunk_size = 8000
+        for file_storage in files:
+            raw_bytes = file_storage.read()
+            if not raw_bytes:
+                continue
+            try:
+                html_text = raw_bytes.decode('utf-8', errors='ignore')
+            except Exception:
+                html_text = raw_bytes.decode(errors='ignore')
+            match = re.search(r'<body[^>]*>(.*?)</body>', html_text, flags=re.IGNORECASE | re.DOTALL)
+            body_html = (match.group(1).strip() if match else html_text.strip())
+            if not body_html:
+                continue
+            for idx in range(0, len(body_html), chunk_size):
+                snippet = body_html[idx: idx + chunk_size]
+                pages_html.append(f'<article class="pdf-source-page" data-origin-page="{len(pages_html)+1}">{snippet}</article>')
+
+        if not pages_html:
+            return jsonify({'error': '未获取到有效的 HTML 内容'}), 400
+
+    else:
+        file_storage = files[0]
+        filename = secure_filename(file_storage.filename)
+        if not filename.lower().endswith('.pdf'):
+            return jsonify({'error': '仅支持上传 PDF 文件'}), 400
+        try:
+            pages_html = extract_pdf_pages(file_storage)
+        except ValueError as exc:
+            return jsonify({'error': str(exc)}), 400
+        except Exception:  # noqa: BLE001
+            return jsonify({'error': '解析 PDF 时出现未知错误'}), 500
+
+        inferred_title = Path(filename).stem or '自动导入的图书'
+        book_title = (request.form.get('title') or inferred_title).strip() or inferred_title
+        book_description = (request.form.get('description') or f'来源 PDF {filename} 的自动分页内容').strip() or f'来源 PDF {filename} 的自动分页内容'
+        chapter_title = f'{book_title} - 原始分页'
+        chapter_summary = '由管理员上传的 PDF 自动生成章节'
+
+    book_id = provided_book_id or generate_unique_book_id(book_title)
     if provided_book_id and Book.query.get(book_id):
         return jsonify({'error': '书籍 ID 已存在，请更换 ID 或留空自动生成'}), 400
 
@@ -285,8 +335,8 @@ def admin_upload_pdf_book():
         chapter = BookChapter(
             book=book,
             chapter_number=1,
-            title=f'{book_title} - 原始分页',
-            summary='由管理员上传的 PDF 自动生成章节',
+            title=chapter_title,
+            summary=chapter_summary,
             start_page=0
         )
         db.session.add(chapter)
@@ -303,19 +353,17 @@ def admin_upload_pdf_book():
         db.session.commit()
     except Exception:  # noqa: BLE001
         db.session.rollback()
-        app.logger.exception('Admin PDF import failed')
-        return jsonify({'error': '写入数据库失败，请查看后端日志'}), 500
+        app.logger.exception('Admin import failed')
+        return jsonify({'error': '写入数据库失败，请查看服务日志'}), 500
 
     return jsonify({
-        'message': 'PDF 导入成功',
+        'message': '导入成功',
         'book': {
             'id': book.id,
             'title': book.title,
             'pageCount': len(pages_html)
         }
     }), 201
-
-
 @admin_bp.delete('/books/<book_id>')
 @admin_required
 def admin_delete_book(book_id: str):

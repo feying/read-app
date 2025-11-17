@@ -75,7 +75,7 @@
                         <form id="pdf-upload-form" class="mt-4 space-y-3">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">PDF 文件</label>
-                                <input type="file" id="pdf-file" name="pdf" accept="application/pdf" required class="w-full text-sm text-gray-600">
+                                <input type="file" id="pdf-file" name="file" accept=".pdf,.html,.htm" class="w-full text-sm" multiple>
                             </div>
                             <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                                 <div>
@@ -97,8 +97,11 @@
                                     <input type="text" id="pdf-description" name="description" placeholder="简单说明来源" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">来源（可选）</label>
-                                    <input type="text" id="pdf-origin" name="origin" placeholder="例如 default / MinerU" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">来源</label>
+                                    <select id="pdf-origin" name="origin" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="default" selected>default（PDF 分页）</option>
+                                        <option value="MinerU">MinerU（HTML 直接导入）</option>
+                                    </select>
                                 </div>
                             </div>
                             <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -145,3 +148,5 @@
     <script type="module" src="js/admin.js?v=20250207"></script>
 </body>
 </html>
+
+
