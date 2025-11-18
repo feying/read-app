@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, Blueprint
+from flask import Flask, request, jsonify, Blueprint, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from flask_jwt_extended import (
@@ -20,6 +20,7 @@ from pathlib import Path
 from datetime import timedelta
 from functools import wraps
 from dotenv import load_dotenv
+import base64
 
 load_dotenv()
 
@@ -170,6 +171,47 @@ def extract_pdf_pages(file_storage) -> list[str]:
         raise ValueError('未能从 PDF 中解析出任何页面')
     return pages_html
 
+def save_base64_images(html_content: str, book_id: str, page_index: int, base_url: str | None = None) -> str:
+    """
+    将 html_content 中的 data:image/...;base64,... 图片提取为文件，
+    保存至 backend/src/{book_id}/{page_index}/ 并替换 src 为文件路径。
+    """
+    storage_root = Path(__file__).resolve().parent / 'src'
+    pattern = re.compile(r'<img([^>]+)src="data:image/([^;]+);base64,([A-Za-z0-9+/=]+)"([^>]*)>', re.IGNORECASE)
+    counter = 1
+
+    def replace(match: re.Match) -> str:
+        nonlocal counter
+        attrs_before = match.group(1) or ''
+        mime = (match.group(2) or '').lower()
+        data_b64 = match.group(3) or ''
+        attrs_after = match.group(4) or ''
+
+        ext_map = {
+            'jpeg': 'jpg',
+            'jpg': 'jpg',
+            'png': 'png',
+            'gif': 'gif',
+            'webp': 'webp',
+            'bmp': 'bmp',
+        }
+        ext = ext_map.get(mime.split('/')[-1], 'png')
+
+        dir_path = storage_root / book_id / str(page_index)
+        dir_path.mkdir(parents=True, exist_ok=True)
+        filename = f'img_{counter}.{ext}'
+        counter += 1
+        try:
+            (dir_path / filename).write_bytes(base64.b64decode(data_b64))
+        except Exception:
+            return match.group(0)  # 失败时保留原样
+
+        rel_path = f"/src/{book_id}/{page_index}/{filename}"
+        if base_url:
+            rel_path = f"{base_url}{rel_path}"
+        return f'<img{attrs_before}src="{rel_path}"{attrs_after}>'
+
+    return pattern.sub(replace, html_content or '')
 
 def serialize_user(user: User) -> dict:
     return {
@@ -254,6 +296,9 @@ def admin_upload_pdf_book():
         return jsonify({'error': '默认词典 ID 不存在'}), 400
 
     provided_book_id = (request.form.get('book_id') or '').strip()
+    book_id = None
+    book_title = ''
+    book_description = ''
 
     pages_html = []
     chapter_title = ''
@@ -276,10 +321,11 @@ def admin_upload_pdf_book():
         inferred_title = Path(first_name).stem or '自动导入的图书'
         book_title = (request.form.get('title') or inferred_title).strip() or inferred_title
         book_description = (request.form.get('description') or f'来源 HTML {first_name} 的内容').strip() or f'来源 HTML {first_name} 的内容'
+        book_id = provided_book_id or generate_unique_book_id(book_title)
         chapter_title = f'{book_title} - MinerU 导入'
         chapter_summary = '管理员通过 MinerU HTML 导入的内容'
 
-        chunk_size = 8000
+        chunk_size = 50000
         for file_storage in files:
             raw_bytes = file_storage.read()
             if not raw_bytes:
@@ -294,7 +340,10 @@ def admin_upload_pdf_book():
                 continue
             for idx in range(0, len(body_html), chunk_size):
                 snippet = body_html[idx: idx + chunk_size]
-                pages_html.append(f'<article class="pdf-source-page" data-origin-page="{len(pages_html)+1}">{snippet}</article>')
+                page_index = len(pages_html) + 1
+                base_url = request.host_url.rstrip('/') if request else ''
+                cleaned = save_base64_images(snippet, book_id, page_index, base_url=base_url)
+                pages_html.append(f'<article class="pdf-source-page" data-origin-page="{page_index}">{cleaned}</article>')
 
         if not pages_html:
             return jsonify({'error': '未获取到有效的 HTML 内容'}), 400
@@ -314,10 +363,9 @@ def admin_upload_pdf_book():
         inferred_title = Path(filename).stem or '自动导入的图书'
         book_title = (request.form.get('title') or inferred_title).strip() or inferred_title
         book_description = (request.form.get('description') or f'来源 PDF {filename} 的自动分页内容').strip() or f'来源 PDF {filename} 的自动分页内容'
+        book_id = provided_book_id or generate_unique_book_id(book_title)
         chapter_title = f'{book_title} - 原始分页'
         chapter_summary = '由管理员上传的 PDF 自动生成章节'
-
-    book_id = provided_book_id or generate_unique_book_id(book_title)
     if provided_book_id and Book.query.get(book_id):
         return jsonify({'error': '书籍 ID 已存在，请更换 ID 或留空自动生成'}), 400
 
@@ -649,6 +697,15 @@ def get_progress(user_id: int):
 
 
 app.register_blueprint(admin_bp)
+
+
+@app.route('/src/<path:filename>')
+def serve_mineru_asset(filename: str):
+    base_dir = Path(__file__).resolve().parent / 'src'
+    target = base_dir / filename
+    if not target.exists():
+        return jsonify({'error': '文件不存在'}), 404
+    return send_from_directory(base_dir, filename)
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

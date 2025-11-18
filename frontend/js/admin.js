@@ -29,11 +29,6 @@ const pdfTitleInput = document.getElementById('pdf-title');
 const pdfBookIdInput = document.getElementById('pdf-book-id');
 const pdfDictInput = document.getElementById('pdf-dictionary-id');
 const pdfDescInput = document.getElementById('pdf-description');
-const pdfOriginSelect = document.getElementById('pdf-origin');
-const pdfTitleInput = document.getElementById('pdf-title');
-const pdfBookIdInput = document.getElementById('pdf-book-id');
-const pdfDictInput = document.getElementById('pdf-dictionary-id');
-const pdfDescInput = document.getElementById('pdf-description');
 
 const ADMIN_TOKEN_KEY = 'admin_token';
 const HTML_ESCAPE_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
