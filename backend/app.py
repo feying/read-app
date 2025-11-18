@@ -337,7 +337,7 @@ def admin_upload_pdf_book():
         chapter_title = f'{book_title} - MinerU 导入'
         chapter_summary = '管理员通过 MinerU HTML 导入的内容'
 
-        chunk_size = 50000
+        base_url = request.host_url.rstrip('/') if request else ''
         for file_storage in files:
             raw_bytes = file_storage.read()
             if not raw_bytes:
@@ -350,12 +350,9 @@ def admin_upload_pdf_book():
             body_html = (match.group(1).strip() if match else html_text.strip())
             if not body_html:
                 continue
-            for idx in range(0, len(body_html), chunk_size):
-                snippet = body_html[idx: idx + chunk_size]
-                page_index = len(pages_html) + 1
-                base_url = request.host_url.rstrip('/') if request else ''
-                cleaned = save_base64_images(snippet, book_id, page_index, base_url=base_url)
-                pages_html.append(f'<article class="pdf-source-page" data-origin-page="{page_index}">{cleaned}</article>')
+            page_index = len(pages_html) + 1
+            cleaned = save_base64_images(body_html, book_id, page_index, base_url=base_url)
+            pages_html.append(f'<article class=\"pdf-source-page\" data-origin-page=\"{page_index}\">{cleaned}</article>')
 
         if not pages_html:
             return jsonify({'error': '未获取到有效的 HTML 内容'}), 400
