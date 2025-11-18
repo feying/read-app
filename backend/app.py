@@ -21,6 +21,7 @@ from datetime import timedelta
 from functools import wraps
 from dotenv import load_dotenv
 import base64
+from flask import send_from_directory
 
 load_dotenv()
 
@@ -212,6 +213,17 @@ def save_base64_images(html_content: str, book_id: str, page_index: int, base_ur
         return f'<img{attrs_before}src="{rel_path}"{attrs_after}>'
 
     return pattern.sub(replace, html_content or '')
+
+
+def rewrite_src_to_absolute(html_content: str, base_url: str) -> str:
+    """
+    将 src="/src/..." 或 src="src/..." 统一替换为带后端域名的绝对地址，避免前端域名 404。
+    """
+    if not html_content:
+        return html_content
+    base = base_url.rstrip('/')
+    pattern = re.compile(r'src=[\'\"]/?src/([^\'\"]+)[\'\"]', flags=re.IGNORECASE)
+    return pattern.sub(lambda m: f'src=\"{base}/src/{m.group(1)}\"', html_content)
 
 def serialize_user(user: User) -> dict:
     return {
@@ -531,10 +543,11 @@ def get_book_page(book_id: str, page_number: int):
     if not pages:
         return jsonify({'error': '未找到对应页'}), 404
 
+    base_url = request.host_url.rstrip('/')
     response = [
         {
             'pageNumber': page.page_number,
-            'htmlContent': page.html_content,
+            'htmlContent': rewrite_src_to_absolute(page.html_content, base_url),
             'chapterTitle': page.chapter.title if page.chapter else None
         }
         for page in pages
