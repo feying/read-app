@@ -18,6 +18,12 @@
     - 双击 `.translation`：调用 `callDeepSeekAPI` 进行 AI 翻译，更新译文并标记 `ai-enhanced`。
     - 三击 `.translation`：调用 AI 术语解释弹窗。
   - 样式：`frontend/css/styles.css` 定义 `.word`、`.translation`、`translation-pos-*`，支持翻译显示上/左/右三种位置。默认 `.word-container` 为 `inline-flex` 纵向堆叠（翻译在上、单词在下），翻译占位撑开行高，避免与上一行重叠。
+- **MinerU 导入与静态资源**：
+  - 后端 `admin_upload_pdf_book` 支持两种来源：`default`（PDF 自动分页）与 `MinerU`（HTML 直接导入，多文件按文件名数字升序拼页）。
+  - MinerU 导入时会提取 `<body>` 内容，按 50KB 分片生成 `BookPage`；base64 图片会落盘到 `backend/src/{book_id}/{page_index}/`，并在返回页面数据时把 `img src` 重写为携带后端域名的绝对路径，前端可直接加载。
+  - 后端提供静态路由 `/src/<path:filename>`（Flask），用于返回落盘的图片等资源。
+  - 前端 admin 上传：`admin.html` 允许多选 `.pdf/.html/.htm`；`admin.js` 对 MinerU 分支排序文件、打包表单字段与文件一同上传；default 分支仅允许 PDF。
+  - 阅读页容器 `#content`：`all: revert` 隔离 Tailwind，Times New Roman 16px、行高 1.6，宽度固定 210mm 居中。
 
 ## 请求 Codex 时的提示
 1. **先看文档**：`readme.md` 和 `DATABASE_SETUP.md` 记录运行步骤、数据库准备及常见问题。
