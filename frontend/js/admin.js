@@ -29,9 +29,17 @@ const pdfTitleInput = document.getElementById('pdf-title');
 const pdfBookIdInput = document.getElementById('pdf-book-id');
 const pdfDictInput = document.getElementById('pdf-dictionary-id');
 const pdfDescInput = document.getElementById('pdf-description');
+const pageDeleteBookSelect = document.getElementById('page-delete-book-select');
+const pageDeletePageSelect = document.getElementById('page-delete-page-select');
+const deleteSelectedPagesBtn = document.getElementById('delete-selected-pages-btn');
+const pageDeleteStatus = document.getElementById('page-delete-status');
+const refreshPageListBtn = document.getElementById('refresh-page-list');
 
 const ADMIN_TOKEN_KEY = 'admin_token';
 const HTML_ESCAPE_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+
+let cachedBookList = [];
+let cachedPageNumbers = [];
 
 function getAdminToken() {
     return localStorage.getItem(ADMIN_TOKEN_KEY);
@@ -51,6 +59,8 @@ function escapeHtml(value = '') {
 
 function renderBookSummaryList(items = []) {
     if (!booksOutput) return;
+    cachedBookList = Array.isArray(items) ? items : [];
+    populatePageDeleteBookOptions();
     if (!items.length) {
         booksOutput.innerHTML = '<p class="text-gray-500 text-sm">No books yet</p>';
         return;
@@ -124,6 +134,90 @@ function hydrateExistingBookList() {
 }
 
 hydrateExistingBookList();
+
+function populatePageDeleteBookOptions() {
+    if (!pageDeleteBookSelect) return;
+    const previous = pageDeleteBookSelect.value;
+    pageDeleteBookSelect.innerHTML = '<option value="">请选择需要操作的书籍</option>';
+    cachedBookList.forEach(book => {
+        if (!book || !book.id) return;
+        const option = document.createElement('option');
+        option.value = book.id;
+        option.textContent = `${book.title || '未命名'}（${book.id}）`;
+        pageDeleteBookSelect.appendChild(option);
+    });
+    if (previous && cachedBookList.some(book => book.id === previous)) {
+        pageDeleteBookSelect.value = previous;
+    } else {
+        pageDeleteBookSelect.value = '';
+        pageDeletePageSelect && (pageDeletePageSelect.innerHTML = '');
+        deleteSelectedPagesBtn && (deleteSelectedPagesBtn.disabled = true);
+    }
+}
+
+function setPageDeleteStatus(message = '', variant = 'info') {
+    if (!pageDeleteStatus) return;
+    pageDeleteStatus.textContent = message;
+    pageDeleteStatus.classList.remove('text-gray-500', 'text-red-500', 'text-green-600');
+    const colorClass = variant === 'error'
+        ? 'text-red-500'
+        : variant === 'success'
+            ? 'text-green-600'
+            : 'text-gray-500';
+    pageDeleteStatus.classList.add(colorClass);
+}
+
+async function loadPageNumbersForBook(bookId) {
+    if (!pageDeletePageSelect) return;
+    pageDeletePageSelect.innerHTML = '';
+    deleteSelectedPagesBtn && (deleteSelectedPagesBtn.disabled = true);
+    if (!bookId) {
+        setPageDeleteStatus('请选择书籍以加载页码', 'info');
+        return;
+    }
+    setPageDeleteStatus('正在加载页码...', 'info');
+    try {
+        const data = await fetchAdminResource(`/books/${encodeURIComponent(bookId)}/page_numbers`);
+        const numbers = data.pageNumbers || [];
+        if (!numbers.length) {
+            setPageDeleteStatus('该书暂无页面', 'info');
+            return;
+        }
+        numbers.forEach(num => {
+            const option = document.createElement('option');
+            option.value = num;
+            option.textContent = `第 ${num} 页`;
+            pageDeletePageSelect.appendChild(option);
+        });
+        deleteSelectedPagesBtn && (deleteSelectedPagesBtn.disabled = false);
+        setPageDeleteStatus(`共 ${numbers.length} 个页面，可多选删除`, 'success');
+    } catch (error) {
+        setPageDeleteStatus(error.message || '加载页码失败', 'error');
+    }
+}
+
+async function adminDeletePages(bookId, pageNumbers) {
+    const response = await fetch(`${API_BASE}/books/${encodeURIComponent(bookId)}/pages`, {
+        method: 'DELETE',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ page_numbers: pageNumbers })
+    });
+    let data = {};
+    try {
+        data = await response.json();
+    } catch (error) {
+        // ignore
+    }
+    if (response.status === 401 || response.status === 403) {
+        clearAdminToken();
+        showLogin();
+        throw new Error('登录已过期，请重新登录');
+    }
+    if (!response.ok) {
+        throw new Error(data.error || `删除失败 (HTTP ${response.status})`);
+    }
+    return data;
+}
 
 async function handleBookListClick(event) {
     const deleteBtn = event.target.closest('[data-action="delete-book"]');
@@ -388,6 +482,57 @@ sidebarCloseBtn?.addEventListener('click', () => toggleSidebar(false));
 
 backBtn?.addEventListener('click', () => {
     window.location.href = 'index.html';
+});
+
+pageDeleteBookSelect?.addEventListener('change', async () => {
+    const bookId = pageDeleteBookSelect.value;
+    if (!bookId) {
+        if (pageDeletePageSelect) pageDeletePageSelect.innerHTML = '';
+        if (deleteSelectedPagesBtn) deleteSelectedPagesBtn.disabled = true;
+        setPageDeleteStatus('请选择书籍以加载页码', 'info');
+        return;
+    }
+    await loadPageNumbersForBook(bookId);
+});
+
+refreshPageListBtn?.addEventListener('click', async () => {
+    const bookId = pageDeleteBookSelect?.value;
+    if (bookId) {
+        await loadPageNumbersForBook(bookId);
+    } else {
+        await refreshBooks();
+    }
+});
+
+deleteSelectedPagesBtn?.addEventListener('click', async () => {
+    const bookId = pageDeleteBookSelect?.value;
+    if (!bookId) {
+        setPageDeleteStatus('请选择书籍', 'error');
+        return;
+    }
+    if (!pageDeletePageSelect) return;
+    const selected = Array.from(pageDeletePageSelect.selectedOptions)
+        .map(opt => parseInt(opt.value, 10))
+        .filter(Number.isInteger);
+    if (!selected.length) {
+        setPageDeleteStatus('请选择需要删除的页码', 'error');
+        return;
+    }
+    const confirmed = window.confirm(`确认删除《${bookId}》中的 ${selected.length} 个页面？该操作不可撤销。`);
+    if (!confirmed) return;
+
+    deleteSelectedPagesBtn.disabled = true;
+    setPageDeleteStatus('正在删除选中页...', 'info');
+    try {
+        await adminDeletePages(bookId, selected);
+        setPageDeleteStatus('已删除所选页面', 'success');
+        await loadPageNumbersForBook(bookId);
+        await refreshBooks();
+    } catch (error) {
+        setPageDeleteStatus(error.message || '删除失败', 'error');
+    } finally {
+        deleteSelectedPagesBtn.disabled = false;
+    }
 });
 
 pdfUploadForm?.addEventListener('submit', async (event) => {

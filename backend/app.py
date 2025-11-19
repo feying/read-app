@@ -209,7 +209,8 @@ def save_base64_images(html_content: str, book_id: str, page_index: int, base_ur
             return match.group(0)  # 失败时保留原样
 
         rel_path = f"/src/{book_id}/{page_index}/{filename}"
-        return f'<img{attrs_before}src="{rel_path}"{attrs_after}>'
+        img_tag = f'<img{attrs_before}src="{rel_path}"{attrs_after}>'
+        return f'<div class="pdf-image-wrapper" style="text-align:center;">{img_tag}</div>'
 
     return pattern.sub(replace, html_content or '')
 
@@ -512,6 +513,68 @@ def admin_delete_book(book_id: str):
             'chapters': removed_chapters,
             'affectedUsers': affected_users,
         }
+    }), 200
+
+
+@admin_bp.get('/books/<book_id>/page_numbers')
+@admin_required
+def admin_get_book_page_numbers(book_id: str):
+    book = Book.query.get(book_id)
+    if not book:
+        return jsonify({'error': '�鼮������'}), 404
+    pages = (
+        BookPage.query.filter_by(book_id=book_id)
+        .with_entities(BookPage.page_number)
+        .order_by(BookPage.page_number.asc())
+        .all()
+    )
+    numbers = [p[0] if not hasattr(p, 'page_number') else p.page_number for p in pages]
+    return jsonify({'bookId': book_id, 'pageNumbers': numbers}), 200
+
+
+@admin_bp.delete('/books/<book_id>/pages')
+@admin_required
+def admin_delete_book_pages(book_id: str):
+    book = Book.query.get(book_id)
+    if not book:
+        return jsonify({'error': '�鼮������'}), 404
+
+    data = request.get_json(silent=True) or {}
+    raw_numbers = data.get('page_numbers')
+    if not isinstance(raw_numbers, list) or not raw_numbers:
+        return jsonify({'error': '��ѡ��Ҫɾ����ҳ��'}), 400
+
+    try:
+        page_numbers = sorted({int(num) for num in raw_numbers})
+    except (TypeError, ValueError):
+        return jsonify({'error': 'ҳ������Ч�������ж��ֽ�'}), 400
+
+    pages_query = (
+        BookPage.query.filter_by(book_id=book_id)
+        .filter(BookPage.page_number.in_(page_numbers))
+    )
+    found_pages = pages_query.all()
+    if not found_pages:
+        return jsonify({'error': 'δ�ҵ���Щҳ������ɾ��'}), 404
+
+    storage_root = Path(__file__).resolve().parent / 'src'
+
+    try:
+        for page in found_pages:
+            dir_path = storage_root / book_id / str(page.page_number)
+            if dir_path.exists():
+                shutil.rmtree(dir_path, ignore_errors=True)
+            db.session.delete(page)
+        db.session.commit()
+    except Exception:  # noqa: BLE001
+        db.session.rollback()
+        app.logger.exception('Admin delete specific pages failed')
+        return jsonify({'error': 'ɾ��ָ��ҳʱ��������'}), 500
+
+    return jsonify({
+        'message': 'ָ��ҳ�Ѿ�ɾ��',
+        'book_id': book_id,
+        'removedPageNumbers': page_numbers
     }), 200
 def admin_list_dictionaries():
     dictionaries = Dictionary.query.all()

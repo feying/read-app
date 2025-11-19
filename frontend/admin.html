@@ -110,6 +110,32 @@
                             </div>
                         </form>
                     </div>
+                    <div class="border border-gray-200 rounded-lg p-4 mb-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h4 class="text-base font-semibold text-gray-800">删除书籍的指定页</h4>
+                                <p class="text-xs text-gray-500 mt-1">选择一本书并勾选要移除的页码，系统会同步清理文件。</p>
+                            </div>
+                            <button id="refresh-page-list" class="text-sm text-blue-600 hover:text-blue-500">刷新列表</button>
+                        </div>
+                        <div class="grid gap-4 mt-4 md:grid-cols-2">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">书籍</label>
+                                <select id="page-delete-book-select" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                                    <option value="">请选择需要操作的书籍</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">页码（可多选）</label>
+                                <select id="page-delete-page-select" multiple size="6" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"></select>
+                                <p class="text-xs text-gray-500 mt-1">按住 Ctrl / Cmd 可多选多个页码。</p>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex items-center space-x-3">
+                            <button id="delete-selected-pages-btn" class="bg-red-600 text-white px-4 py-2 rounded-md text-sm hover:bg-red-700 disabled:opacity-60" disabled>删除选中页</button>
+                            <p id="page-delete-status" class="text-xs text-gray-500"></p>
+                        </div>
+                    </div>
                     <div class="flex items-center justify-between mb-3">
                         <div>
                             <h3 class="text-lg font-semibold text-gray-800">书籍管理</h3>
