@@ -21,6 +21,7 @@ from datetime import timedelta
 from functools import wraps
 from dotenv import load_dotenv
 import base64
+import shutil
 from flask import send_from_directory
 
 load_dotenv()
@@ -423,10 +424,14 @@ def admin_upload_pdf_book():
     }), 201
 @admin_bp.delete('/books/<book_id>')
 @admin_required
+
 def admin_delete_book(book_id: str):
     book = Book.query.get(book_id)
     if not book:
-        return jsonify({'error': '书籍不存在'}), 404
+        return jsonify({'error': '�鼮������'}), 404
+
+    storage_root = Path(__file__).resolve().parent / 'src'
+    book_storage_dir = storage_root / book_id
 
     try:
         removed_pages = BookPage.query.filter_by(book_id=book_id).delete(synchronize_session=False)
@@ -440,14 +445,17 @@ def admin_delete_book(book_id: str):
             }, synchronize_session=False)
         )
         db.session.delete(book)
+        # �����յ�����Ӧ����ݺ�ɾ��ͼƬ/HTML �ļ�Ŀ¼��ɾ��ʧ�ܲ�����ʧ������ݿ�
+        if book_storage_dir.exists():
+            shutil.rmtree(book_storage_dir, ignore_errors=True)
         db.session.commit()
     except Exception:  # noqa: BLE001
         db.session.rollback()
         app.logger.exception('Admin delete book failed')
-        return jsonify({'error': '删除书籍时发生错误'}), 500
+        return jsonify({'error': 'ɾ���鼮ʱ��������'}), 500
 
     return jsonify({
-        'message': '书籍已删除',
+        'message': '�鼮��ɾ��',
         'book_id': book_id,
         'removed': {
             'pages': removed_pages,
@@ -455,10 +463,6 @@ def admin_delete_book(book_id: str):
             'affectedUsers': affected_users,
         }
     }), 200
-
-
-@admin_bp.get('/dictionaries')
-@admin_required
 def admin_list_dictionaries():
     dictionaries = Dictionary.query.all()
     items = []
