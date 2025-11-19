@@ -11,6 +11,7 @@ import {
     getCurrentUser,
     getBookPages,
     searchBook,
+    getBookPageNumbers,
     setAuthToken,
     clearAuthToken
 } from './api.js';
@@ -20,7 +21,7 @@ import {
 let deepSeekApiKey = null;
 let currentBookId = null;
 let activeDictionary = {};
-let currentPage = 0;
+let currentPage = null; // stores actual page_number from backend
 let currentUser = null;
 let authToken = null;
 let currentBookMeta = null;
@@ -28,6 +29,7 @@ let currentBookMeta = null;
 let allDictionaries = {};
 let allLibraryData = {};
 let bookPageCache = {};
+let bookPageOrders = {}; // bookId -> sorted array of available page numbers
 
 // --- DOM 元素引用 ---
 let contentDiv, userBtn, userModal, closeModalBtn, libraryBtn, libraryModal, closeLibraryModalBtn, libraryList;
@@ -67,8 +69,10 @@ function handleUnauthorizedState(message = '登录已过期，请重新登录') 
     clearAuthToken();
     currentUser = null;
     currentBookId = null;
+    currentPage = null;
     currentBookMeta = null;
     bookPageCache = {};
+    bookPageOrders = {};
     localStorage.clear();
     updateUserEmailDisplay();
     if (contentDiv) {
@@ -299,37 +303,54 @@ function renderSearchResults(results = []) {
 }
 
 
-// --- \u9875\u9762\u548c\u4e66\u5e93\u903b\u8f91 ---
-// (\u8fd9\u90e8\u5206\u51fd\u6570 renderPaginationControls, loadPage, populateLibraryModal, loadBook \u4fdd\u6301\u4e0d\u53d8)
+// --- 页面和书库逻辑 ---
+function getCurrentPageOrder() {
+    const order = bookPageOrders[currentBookId] || [];
+    return [...order].sort((a, b) => a - b);
+}
+
 function renderPaginationControls() {
     paginationControls.innerHTML = '';
-    const meta = getCurrentBookMeta();
-    const totalPages = (meta && meta.pageCount) || 0;
-    if (!meta || totalPages <= 1) return;
+    const order = getCurrentPageOrder();
+    const totalPages = order.length;
+    if (totalPages <= 1 || currentPage === null) return;
+
+    const currentIdx = order.indexOf(currentPage);
+    if (currentIdx === -1) return;
 
     const prevButton = document.createElement('button');
-    prevButton.textContent = '\u4e0a\u4e00\u9875';
+    prevButton.textContent = '上一页';
     prevButton.className = 'px-4 py-2 text-sm bg-white border rounded-md shadow-sm disabled:opacity-50';
-    prevButton.disabled = currentPage === 0;
-    prevButton.addEventListener('click', () => loadPage(currentPage - 1));
+    prevButton.disabled = currentIdx === 0;
+    prevButton.addEventListener('click', () => {
+        if (currentIdx > 0) loadPage(order[currentIdx - 1]);
+    });
 
     const pageIndicator = document.createElement('span');
-    pageIndicator.textContent = '\u7b2c ' + (currentPage + 1) + ' / ' + totalPages + ' \u9875';
+    pageIndicator.textContent = `第 ${currentIdx + 1} / ${totalPages} 页（页码：${currentPage}）`;
     pageIndicator.className = 'text-sm text-gray-600';
 
     const nextButton = document.createElement('button');
-    nextButton.textContent = '\u4e0b\u4e00\u9875';
+    nextButton.textContent = '下一页';
     nextButton.className = 'px-4 py-2 text-sm bg-white border rounded-md shadow-sm disabled:opacity-50';
-    nextButton.disabled = currentPage >= totalPages - 1;
-    nextButton.addEventListener('click', () => loadPage(currentPage + 1));
+    nextButton.disabled = currentIdx >= totalPages - 1;
+    nextButton.addEventListener('click', () => {
+        if (currentIdx < totalPages - 1) loadPage(order[currentIdx + 1]);
+    });
     
     paginationControls.append(prevButton, pageIndicator, nextButton);
 }
 
 async function loadPage(pageNumber) {
-    const meta = getCurrentBookMeta();
-    const totalPages = (meta && meta.pageCount) || 0;
-    if (!meta || pageNumber < 0 || pageNumber >= totalPages) return;
+    const order = getCurrentPageOrder();
+    if (!currentBookId || order.length === 0) return;
+
+    // 如果请求的页码不存在，回退到最接近的页
+    if (!order.includes(pageNumber)) {
+        const sorted = order;
+        const fallback = sorted.find(p => p >= pageNumber) ?? sorted[sorted.length - 1];
+        pageNumber = fallback;
+    }
 
     try {
         await ensurePageCached(currentBookId, pageNumber);
@@ -405,8 +426,28 @@ async function loadBook(bookId, dictionaryId) {
     bookPageCache[bookId] = bookPageCache[bookId] || {};
     updateTocList();
 
-    const lastPage = parseInt(localStorage.getItem(`lastReadPage_${currentBookId}`) || '0', 10);
-    await loadPage(lastPage);
+    // 获取页码顺序（真实页码）
+    if (!bookPageOrders[bookId]) {
+        try {
+            const pageNumberData = await getBookPageNumbers(bookId);
+            const order = Array.isArray(pageNumberData.pageNumbers) ? pageNumberData.pageNumbers : [];
+            bookPageOrders[bookId] = order.sort((a, b) => a - b);
+        } catch (error) {
+            console.error('获取页码列表失败:', error);
+            bookPageOrders[bookId] = [];
+        }
+    }
+
+    const order = getCurrentPageOrder();
+    if (order.length === 0) {
+        console.warn('当前书籍无可用页面');
+        return;
+    }
+
+    const lastPageRaw = localStorage.getItem(`lastReadPage_${currentBookId}`);
+    const lastPage = lastPageRaw ? parseInt(lastPageRaw, 10) : order[0];
+    const pageToLoad = order.includes(lastPage) ? lastPage : order[0];
+    await loadPage(pageToLoad);
 
     localStorage.setItem('lastReadBookId', bookId);
     libraryModal.classList.add('hidden');
@@ -541,8 +582,10 @@ function setupEventListeners() {
         clearAuthToken();
         currentUser = null;
         currentBookId = null;
+        currentPage = null;
         currentBookMeta = null;
         bookPageCache = {};
+        bookPageOrders = {};
         localStorage.clear();
         if (contentDiv) contentDiv.innerHTML = '';
         saveStatusEl.textContent = '已退出，页面即将刷新';

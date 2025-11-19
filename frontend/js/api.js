@@ -132,6 +132,10 @@ async function getBookPages(bookId, pageNumber, count = 1) {
     return fetchProtectedJson(`/books/${bookId}/pages/${pageNumber}?count=${count}`);
 }
 
+async function getBookPageNumbers(bookId) {
+    return fetchProtectedJson(`/books/${bookId}/page_numbers`);
+}
+
 async function searchBook(bookId, query) {
     const encoded = encodeURIComponent(query);
     return fetchProtectedJson(`/books/${bookId}/search?q=${encoded}`);
@@ -155,6 +159,7 @@ export {
     getReadingProgress,
     getCurrentUser,
     getBookPages,
+    getBookPageNumbers,
     searchBook,
     setAuthToken,
     clearAuthToken,

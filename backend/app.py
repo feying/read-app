@@ -302,25 +302,25 @@ def admin_upload_pdf_book():
 
     files = request.files.getlist('file') or []
     if not files:
-        return jsonify({'error': '请上传文件'}), 400
+        return jsonify({'error': '���ϴ��ļ�'}), 400
 
     dictionary_id = (request.form.get('default_dictionary_id') or '').strip() or None
     if dictionary_id and not Dictionary.query.get(dictionary_id):
-        return jsonify({'error': '默认词典 ID 不存在'}), 400
+        return jsonify({'error': 'Ĭ�ϴʵ� ID ������'}), 400
 
     provided_book_id = (request.form.get('book_id') or '').strip()
     book_id = None
     book_title = ''
     book_description = ''
 
-    pages_html = []
+    pages_data: list[tuple[int, str]] = []
     chapter_title = ''
     chapter_summary = ''
 
     if origin_lower == 'mineru':
         bad = [f for f in files if not (f.filename or '').lower().endswith(('.html', '.htm'))]
         if bad:
-            return jsonify({'error': 'MinerU 仅支持上传 HTML 文件'}), 400
+            return jsonify({'error': 'MinerU ��֧���ϴ� HTML �ļ�'}), 400
 
         def _num_key(name: str):
             lowered = (name or '').lower()
@@ -330,13 +330,13 @@ def admin_upload_pdf_book():
 
         files.sort(key=lambda f: _num_key(f.filename))
 
-        first_name = secure_filename(files[0].filename or '') or '导入文件'
-        inferred_title = Path(first_name).stem or '自动导入的图书'
+        first_name = secure_filename(files[0].filename or '') or '�����ļ�'
+        inferred_title = Path(first_name).stem or '�Զ������ͼ��'
         book_title = (request.form.get('title') or inferred_title).strip() or inferred_title
-        book_description = (request.form.get('description') or f'来源 HTML {first_name} 的内容').strip() or f'来源 HTML {first_name} 的内容'
+        book_description = (request.form.get('description') or f'��Դ HTML {first_name} ������').strip() or f'��Դ HTML {first_name} ������'
         book_id = provided_book_id or generate_unique_book_id(book_title)
-        chapter_title = f'{book_title} - MinerU 导入'
-        chapter_summary = '管理员通过 MinerU HTML 导入的内容'
+        chapter_title = f'{book_title} - MinerU ����'
+        chapter_summary = '����Աͨ�� MinerU HTML ���������'
 
         base_url = request.host_url.rstrip('/') if request else ''
         for file_storage in files:
@@ -351,33 +351,36 @@ def admin_upload_pdf_book():
             body_html = (match.group(1).strip() if match else html_text.strip())
             if not body_html:
                 continue
-            page_index = len(pages_html) + 1
-            cleaned = save_base64_images(body_html, book_id, page_index, base_url=base_url)
-            pages_html.append(f'<article class=\"pdf-source-page\" data-origin-page=\"{page_index}\">{cleaned}</article>')
+            num_match = re.search(r'(\d+)', file_storage.filename or '')
+            page_number = int(num_match.group(1)) if num_match else len(pages_data)
+            cleaned = save_base64_images(body_html, book_id, page_number, base_url=base_url)
+            pages_data.append((page_number, f'<article class="pdf-source-page" data-origin-page="{page_number}">{cleaned}</article>'))
 
-        if not pages_html:
-            return jsonify({'error': '未获取到有效的 HTML 内容'}), 400
+        if not pages_data:
+            return jsonify({'error': 'δ��ȡ����Ч�� HTML ����'}), 400
 
     else:
         file_storage = files[0]
         filename = secure_filename(file_storage.filename)
         if not filename.lower().endswith('.pdf'):
-            return jsonify({'error': '仅支持上传 PDF 文件'}), 400
+            return jsonify({'error': '��֧���ϴ� PDF �ļ�'}), 400
         try:
             pages_html = extract_pdf_pages(file_storage)
         except ValueError as exc:
             return jsonify({'error': str(exc)}), 400
         except Exception:  # noqa: BLE001
-            return jsonify({'error': '解析 PDF 时出现未知错误'}), 500
+            return jsonify({'error': '���� PDF ʱ����δ֪����'}), 500
 
-        inferred_title = Path(filename).stem or '自动导入的图书'
+        inferred_title = Path(filename).stem or '�Զ������ͼ��'
         book_title = (request.form.get('title') or inferred_title).strip() or inferred_title
-        book_description = (request.form.get('description') or f'来源 PDF {filename} 的自动分页内容').strip() or f'来源 PDF {filename} 的自动分页内容'
+        book_description = (request.form.get('description') or f'��Դ PDF {filename} ���Զ���ҳ����').strip() or f'��Դ PDF {filename} ���Զ���ҳ����'
         book_id = provided_book_id or generate_unique_book_id(book_title)
-        chapter_title = f'{book_title} - 原始分页'
-        chapter_summary = '由管理员上传的 PDF 自动生成章节'
+        chapter_title = f'{book_title} - ԭʼ��ҳ'
+        chapter_summary = '�ɹ���Ա�ϴ��� PDF �Զ������½�'
+
+        pages_data = [(idx, html_content) for idx, html_content in enumerate(pages_html)]
     if provided_book_id and Book.query.get(book_id):
-        return jsonify({'error': '书籍 ID 已存在，请更换 ID 或留空自动生成'}), 400
+        return jsonify({'error': '�鼮 ID �Ѵ��ڣ������ ID �������Զ�����'}), 400
 
     try:
         book = Book(
@@ -400,11 +403,11 @@ def admin_upload_pdf_book():
         db.session.add(chapter)
         db.session.flush()
 
-        for idx, html_content in enumerate(pages_html):
+        for page_number, html_content in pages_data:
             db.session.add(BookPage(
                 book=book,
                 chapter=chapter,
-                page_number=idx,
+                page_number=page_number,
                 html_content=html_content
             ))
 
@@ -412,14 +415,14 @@ def admin_upload_pdf_book():
     except Exception:  # noqa: BLE001
         db.session.rollback()
         app.logger.exception('Admin import failed')
-        return jsonify({'error': '写入数据库失败，请查看服务日志'}), 500
+        return jsonify({'error': 'д�����ݿ�ʧ�ܣ���鿴������־'}), 500
 
     return jsonify({
-        'message': '导入成功',
+        'message': '����ɹ�',
         'book': {
             'id': book.id,
             'title': book.title,
-            'pageCount': len(pages_html)
+            'pageCount': len(pages_data)
         }
     }), 201
 @admin_bp.delete('/books/<book_id>')
@@ -532,17 +535,24 @@ def get_book_page(book_id: str, page_number: int):
     except ValueError:
         return jsonify({'error': 'count 参数必须为整数'}), 400
     count = max(1, min(count, 10))
-    if page_number < 0:
-        return jsonify({'error': '页码必须大于等于 0'}), 400
-
+    pages_query = BookPage.query.filter_by(book_id=book_id)
     pages = (
-        BookPage.query.filter_by(book_id=book_id)
+        pages_query
         .filter(BookPage.page_number >= page_number, BookPage.page_number < page_number + count)
         .order_by(BookPage.page_number.asc())
         .all()
     )
     if not pages:
-        return jsonify({'error': '未找到对应页'}), 404
+        first_page = pages_query.order_by(BookPage.page_number.asc()).first()
+        if first_page and page_number < first_page.page_number:
+            pages = (
+                pages_query
+                .filter(BookPage.page_number >= first_page.page_number, BookPage.page_number < first_page.page_number + count)
+                .order_by(BookPage.page_number.asc())
+                .all()
+            )
+        if not pages:
+            return jsonify({'error': 'δ�ҵ���Ӧҳ'}), 404
 
     base_url = request.host_url.rstrip('/')
     response = [
@@ -556,6 +566,21 @@ def get_book_page(book_id: str, page_number: int):
     return jsonify({'bookId': book_id, 'pages': response}), 200
 
 
+
+
+@app.route('/api/books/<book_id>/page_numbers', methods=['GET'])
+@jwt_required()
+def get_book_page_numbers(book_id: str):
+    pages = (
+        BookPage.query.filter_by(book_id=book_id)
+        .with_entities(BookPage.page_number)
+        .order_by(BookPage.page_number.asc())
+        .all()
+    )
+    nums = [p[0] if not hasattr(p, 'page_number') else p.page_number for p in pages]
+    if not nums:
+        return jsonify({'error': '未找到对应页'}), 404
+    return jsonify({'bookId': book_id, 'pageNumbers': nums}), 200
 @app.route('/api/books/<book_id>/search', methods=['GET'])
 @jwt_required()
 def search_book(book_id: str):
