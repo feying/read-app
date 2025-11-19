@@ -208,8 +208,6 @@ def save_base64_images(html_content: str, book_id: str, page_index: int, base_ur
             return match.group(0)  # 失败时保留原样
 
         rel_path = f"/src/{book_id}/{page_index}/{filename}"
-        if base_url:
-            rel_path = f"{base_url}{rel_path}"
         return f'<img{attrs_before}src="{rel_path}"{attrs_after}>'
 
     return pattern.sub(replace, html_content or '')
@@ -217,14 +215,16 @@ def save_base64_images(html_content: str, book_id: str, page_index: int, base_ur
 
 def rewrite_src_to_absolute(html_content: str, base_url: str) -> str:
     """
-    将 src="/src/..." 或 src="src/..." 统一替换为带后端域名的绝对地址，避免前端域名 404。
+    �� src="/src/..." �� src="src/..." ͳһ�滻Ϊ����������ľ��Ե�ַ������ǰ������ 404��
+    �����Ѿ����� http://127.0.0.1:5000/src/... ��ȫ·�����м�，Ҳһ����ǰ����ؾ���·��
     """
     if not html_content:
         return html_content
     base = base_url.rstrip('/')
-    pattern = re.compile(r'src=[\'\"]/?src/([^\'\"]+)[\'\"]', flags=re.IGNORECASE)
-    return pattern.sub(lambda m: f'src=\"{base}/src/{m.group(1)}\"', html_content)
-
+    pattern_relative = re.compile(r'src=[\'"]/?src/([^\'"]+)[\'"]', flags=re.IGNORECASE)
+    pattern_absolute = re.compile(r'src=[\'"]https?://[^\'"]+/src/([^\'"]+)[\'"]', flags=re.IGNORECASE)
+    rewritten = pattern_absolute.sub(lambda m: f'src="{base}/src/{m.group(1)}"', html_content)
+    return pattern_relative.sub(lambda m: f'src="{base}/src/{m.group(1)}"', rewritten)
 def serialize_user(user: User) -> dict:
     return {
         'id': user.id,
