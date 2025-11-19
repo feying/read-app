@@ -181,12 +181,27 @@ async function fetchAdminResource(path) {
     });
     if (response.status === 401 || response.status === 403) {
         clearAdminToken();
-        throw new Error('未授权，或登录已过期');
+        showLogin();
+        throw new Error('登录已过期，请重新登录');
     }
     if (!response.ok) {
         throw new Error(`请求失败: ${response.status}`);
     }
     return response.json();
+}
+
+
+function showDashboard(email) {
+    if (identityLabel) {
+        identityLabel.textContent = email || '管理员';
+    }
+    if (loginPanel) loginPanel.classList.add('hidden');
+    if (dashboard) dashboard.classList.remove('hidden');
+}
+
+function showLogin() {
+    if (dashboard) dashboard.classList.add('hidden');
+    if (loginPanel) loginPanel.classList.remove('hidden');
 }
 
 async function adminDeleteBook(bookId) {
@@ -198,7 +213,7 @@ async function adminDeleteBook(bookId) {
     try {
         data = await response.json();
     } catch (error) {
-        // ignore non-JSON responses
+        // allow non-JSON body
     }
     if (response.status === 401 || response.status === 403) {
         clearAdminToken();
@@ -206,21 +221,9 @@ async function adminDeleteBook(bookId) {
         throw new Error('登录已过期，请重新登录');
     }
     if (!response.ok) {
-        const message = (data && data.error) || `删除失败 (HTTP ${response.status})`;
-        throw new Error(message);
+        throw new Error(data.error || `删除失败 (HTTP ${response.status})`);
     }
     return data;
-}
-
-function showDashboard(email) {
-    identityLabel.textContent = email || '管理员';
-    loginPanel.classList.add('hidden');
-    dashboard.classList.remove('hidden');
-}
-
-function showLogin() {
-    dashboard.classList.add('hidden');
-    loginPanel.classList.remove('hidden');
 }
 
 async function refreshBooks() {
@@ -285,22 +288,33 @@ function updatePdfUploadStatus(message, variant = 'info') {
     pdfUploadStatus.classList.add(colorClass);
 }
 
-async function uploadPdfViaApi(formData) {
+async function uploadPdfViaApi(formData, options = { allowAppend: false, overwriteConflicts: false }) {
+    const attemptData = new FormData();
+    formData.forEach((value, key) => attemptData.append(key, value));
+    if (options.allowAppend) attemptData.set('allow_append', '1');
+    if (options.overwriteConflicts) attemptData.set('overwrite_conflicts', '1');
+
     const response = await fetch(`${API_BASE}/books/upload_pdf`, {
         method: 'POST',
         headers: authHeaders(),
-        body: formData
+        body: attemptData
     });
     let data = {};
     try {
         data = await response.json();
     } catch (error) {
-        // ignore, we will handle below
+        // ignore
     }
     if (response.status === 401 || response.status === 403) {
         clearAdminToken();
         showLogin();
         throw new Error('登录已过期，请重新登录');
+    }
+    if (response.status === 409) {
+        const err = new Error(data.error || '需要确认');
+        err.code = 409;
+        err.payload = data;
+        throw err;
     }
     if (!response.ok) {
         throw new Error(data.error || `上传失败 (HTTP ${response.status})`);
@@ -381,7 +395,7 @@ pdfUploadForm?.addEventListener('submit', async (event) => {
     const originValue = (pdfOriginSelect?.value || 'default').trim() || 'default';
     const files = Array.from(pdfFileInput?.files || []);
     if (!files.length) {
-        updatePdfUploadStatus('请选择要上传的文件', 'error');
+        updatePdfUploadStatus('请先选择要上传的文件', 'error');
         return;
     }
 
@@ -395,17 +409,17 @@ pdfUploadForm?.addEventListener('submit', async (event) => {
             updatePdfUploadStatus('MinerU 仅支持上传 HTML 文件', 'error');
             return;
         }
-        updatePdfUploadStatus('正在上传 HTML 内容，请稍候...', 'info');
+        updatePdfUploadStatus('正在上传 HTML 数据，请稍候...', 'info');
     } else {
         const invalid = files.find(f => !(f.name || '').toLowerCase().endsWith('.pdf'));
         if (invalid) {
             updatePdfUploadStatus('default 模式仅支持 PDF 文件', 'error');
             return;
         }
-        updatePdfUploadStatus('正在上传 PDF 内容，请稍候...', 'info');
+        updatePdfUploadStatus('正在上传 PDF 数据，请稍候...', 'info');
     }
 
-    let formData;
+    let baseFormData;
     if (isMinerU) {
         const sorted = files.sort((a, b) => {
             const num = (name) => { const m = /\d+/.exec(name); return m ? parseInt(m[0], 10) : Number.MAX_SAFE_INTEGER; };
@@ -414,27 +428,55 @@ pdfUploadForm?.addEventListener('submit', async (event) => {
             if (an === bn) return (a.name || '').localeCompare(b.name || '');
             return an - bn;
         });
-        formData = new FormData();
-        formData.set('origin', originValue);
-        formData.set('title', pdfTitleInput?.value || '');
-        formData.set('book_id', pdfBookIdInput?.value || '');
-        formData.set('default_dictionary_id', pdfDictInput?.value || '');
-        formData.set('description', pdfDescInput?.value || '');
-        sorted.forEach(file => formData.append('file', file));
+        baseFormData = new FormData();
+        baseFormData.set('origin', originValue);
+        baseFormData.set('title', pdfTitleInput?.value || '');
+        baseFormData.set('book_id', pdfBookIdInput?.value || '');
+        baseFormData.set('default_dictionary_id', pdfDictInput?.value || '');
+        baseFormData.set('description', pdfDescInput?.value || '');
+        sorted.forEach(file => baseFormData.append('file', file));
     } else {
-        formData = new FormData(pdfUploadForm);
-        formData.set('origin', originValue);
+        baseFormData = new FormData(pdfUploadForm);
+        baseFormData.set('origin', originValue);
     }
 
-    try {
-        const result = await uploadPdfViaApi(formData);
-        const title = result?.book?.title || '新书籍';
-        const pages = result?.book?.pageCount ?? '若干';
-        updatePdfUploadStatus(`成功导入「${title}」，共 ${pages} 页`, 'success');
-        pdfUploadForm.reset();
-        await refreshBooks();
-    } catch (error) {
-        updatePdfUploadStatus(error.message || '上传失败', 'error');
+    let allowAppend = false;
+    let overwriteConflicts = false;
+
+    while (true) {
+        try {
+            const result = await uploadPdfViaApi(baseFormData, { allowAppend, overwriteConflicts });
+            const title = result?.book?.title || '新书籍';
+            const pages = result?.book?.pageCount ?? '未知';
+            updatePdfUploadStatus(`成功导入《${title}》，共 ${pages} 页`, 'success');
+            pdfUploadForm.reset();
+            await refreshBooks();
+            break;
+        } catch (error) {
+            if (error.code === 409 && error.payload?.needsAppendConfirm) {
+                const ok = window.confirm(error.payload.error || '已有此书籍，是否增补上传？');
+                if (!ok) {
+                    updatePdfUploadStatus('已取消增补上传', 'info');
+                    break;
+                }
+                allowAppend = true;
+                continue;
+            }
+            if (error.code === 409 && error.payload?.needsOverwriteConfirm) {
+                const conflicts = error.payload.conflicts || [];
+                const conflictText = conflicts.length ? `冲突页码: ${conflicts.join(', ')}` : '';
+                const ok = window.confirm(`${error.payload.error || '存在页码冲突，是否覆盖？'}${conflictText ? `\n${conflictText}` : ''}`);
+                if (!ok) {
+                    updatePdfUploadStatus('已取消覆盖冲突页', 'info');
+                    break;
+                }
+                allowAppend = true;
+                overwriteConflicts = true;
+                continue;
+            }
+            updatePdfUploadStatus(error.message || '上传失败', 'error');
+            break;
+        }
     }
 });
 
