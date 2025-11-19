@@ -316,7 +316,7 @@ def admin_upload_pdf_book():
     book_title = ''
     book_description = ''
 
-    pages_data: list[tuple[int, str]] = []
+    pages_data: list[dict] = []
     chapter_title = ''
     chapter_summary = ''
 
@@ -356,8 +356,11 @@ def admin_upload_pdf_book():
                 continue
             num_match = re.search(r'(\d+)', file_storage.filename or '')
             page_number = int(num_match.group(1)) if num_match else len(pages_data)
-            cleaned = save_base64_images(body_html, book_id, page_number, base_url=base_url)
-            pages_data.append((page_number, f'<article class="pdf-source-page" data-origin-page="{page_number}">{cleaned}</article>'))
+            pages_data.append({
+                'page_number': page_number,
+                'body_html': body_html,
+                'base_url': base_url
+            })
 
         if not pages_data:
             return jsonify({'error': '未提取到有效的 HTML 内容'}), 400
@@ -381,7 +384,10 @@ def admin_upload_pdf_book():
         chapter_title = f'{book_title} - 原始扫描页'
         chapter_summary = '由管理员上传的 PDF 自动生成章节'
 
-        pages_data = [(idx, html_content) for idx, html_content in enumerate(pages_html)]
+        pages_data = [
+            {'page_number': idx, 'html_content': html_content}
+            for idx, html_content in enumerate(pages_html)
+        ]
 
     existing_book = Book.query.get(book_id) if book_id else None
     if existing_book and not allow_append:
@@ -415,7 +421,11 @@ def admin_upload_pdf_book():
 
         existing_pages = BookPage.query.filter_by(book_id=book.id).with_entities(BookPage.page_number).all()
         existing_numbers = {p[0] if not hasattr(p, 'page_number') else p.page_number for p in existing_pages}
-        conflict_numbers = [pn for pn, _ in pages_data if pn in existing_numbers]
+        conflict_numbers = [
+            entry['page_number']
+            for entry in pages_data
+            if entry['page_number'] in existing_numbers
+        ]
 
         if conflict_numbers and not overwrite_conflicts:
             return jsonify({
@@ -433,7 +443,13 @@ def admin_upload_pdf_book():
                 if dir_path.exists():
                     shutil.rmtree(dir_path, ignore_errors=True)
 
-        for page_number, html_content in pages_data:
+        for entry in pages_data:
+            page_number = entry['page_number']
+            html_content = entry.get('html_content')
+            if html_content is None:
+                base_url_entry = entry.get('base_url') or (request.host_url.rstrip('/') if request else '')
+                processed = save_base64_images(entry.get('body_html') or '', book.id, page_number, base_url=base_url_entry)
+                html_content = f'<article class=\"pdf-source-page\" data-origin-page=\"{page_number}\">{processed}</article>'
             db.session.add(BookPage(
                 book=book,
                 chapter=chapter,
