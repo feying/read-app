@@ -136,6 +136,47 @@
                             <p id="page-delete-status" class="text-xs text-gray-500"></p>
                         </div>
                     </div>
+
+                    <div class="border border-gray-200 rounded-lg p-4 mb-6">
+                        <div>
+                            <h4 class="text-base font-semibold text-gray-800">章节信息管理</h4>
+                            <p class="text-xs text-gray-500 mt-1">选择书籍后可新增或编辑章节，选择起始页时会使用上方的页码列表。</p>
+                        </div>
+                        <form id="chapter-form" class="mt-4 space-y-3">
+                            <div class="grid gap-3 md:grid-cols-2">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">章节</label>
+                                    <select id="chapter-select" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                                        <option value="">新增章节</option>
+                                    </select>
+                                    <p class="text-xs text-gray-500 mt-1">选择现有章节以编辑，或保持“新增章节”创建新记录。</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">章节号</label>
+                                    <input type="number" id="chapter-number" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" placeholder="如 1、2、3" min="0">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">标题</label>
+                                <input type="text" id="chapter-title" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" placeholder="请输入章节标题">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">摘要</label>
+                                <textarea id="chapter-summary" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" rows="3" placeholder="章节摘要（可选）"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">起始页</label>
+                                <select id="chapter-start-page" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                                    <option value="">请选择章节起始页</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center space-x-3 pt-2">
+                                <button type="submit" id="chapter-save-btn" class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700 disabled:opacity-60">保存章节</button>
+                                <button type="button" id="chapter-reset-btn" class="text-sm text-gray-600 hover:text-gray-800">清空表单</button>
+                                <p id="chapter-status" class="text-xs text-gray-500"></p>
+                            </div>
+                        </form>
+                    </div>
                     <div class="flex items-center justify-between mb-3">
                         <div>
                             <h3 class="text-lg font-semibold text-gray-800">书籍管理</h3>

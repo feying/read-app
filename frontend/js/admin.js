@@ -34,12 +34,22 @@ const pageDeletePageSelect = document.getElementById('page-delete-page-select');
 const deleteSelectedPagesBtn = document.getElementById('delete-selected-pages-btn');
 const pageDeleteStatus = document.getElementById('page-delete-status');
 const refreshPageListBtn = document.getElementById('refresh-page-list');
+const chapterForm = document.getElementById('chapter-form');
+const chapterSelect = document.getElementById('chapter-select');
+const chapterNumberInput = document.getElementById('chapter-number');
+const chapterTitleInput = document.getElementById('chapter-title');
+const chapterSummaryInput = document.getElementById('chapter-summary');
+const chapterStartPageSelect = document.getElementById('chapter-start-page');
+const chapterSaveBtn = document.getElementById('chapter-save-btn');
+const chapterResetBtn = document.getElementById('chapter-reset-btn');
+const chapterStatus = document.getElementById('chapter-status');
 
 const ADMIN_TOKEN_KEY = 'admin_token';
 const HTML_ESCAPE_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 
 let cachedBookList = [];
 let cachedPageNumbers = [];
+let cachedChapters = [];
 
 function getAdminToken() {
     return localStorage.getItem(ADMIN_TOKEN_KEY);
@@ -166,21 +176,55 @@ function setPageDeleteStatus(message = '', variant = 'info') {
             : 'text-gray-500';
     pageDeleteStatus.classList.add(colorClass);
 }
+function setChapterStatus(message = '', variant = 'info') {
+    if (!chapterStatus) return;
+    chapterStatus.textContent = message;
+    chapterStatus.classList.remove('text-gray-500', 'text-red-500', 'text-green-600');
+    const colorClass = variant === 'error'
+        ? 'text-red-500'
+        : variant === 'success'
+            ? 'text-green-600'
+            : 'text-gray-500';
+    chapterStatus.classList.add(colorClass);
+}
+
+
+function populateStartPageOptions(numbers = []) {
+    if (!chapterStartPageSelect) return;
+    const previous = chapterStartPageSelect.value;
+    chapterStartPageSelect.innerHTML = '<option value="">请选择章节起始页</option>';
+    numbers.forEach(num => {
+        const option = document.createElement('option');
+        option.value = num;
+        option.textContent = `第 ${num} 页`;
+        chapterStartPageSelect.appendChild(option);
+    });
+    if (previous && numbers.some(num => String(num) === previous)) {
+        chapterStartPageSelect.value = previous;
+    } else {
+        chapterStartPageSelect.value = numbers.length ? numbers[0] : '';
+    }
+}
 
 async function loadPageNumbersForBook(bookId) {
     if (!pageDeletePageSelect) return;
     pageDeletePageSelect.innerHTML = '';
     deleteSelectedPagesBtn && (deleteSelectedPagesBtn.disabled = true);
     if (!bookId) {
+        cachedPageNumbers = [];
         setPageDeleteStatus('请选择书籍以加载页码', 'info');
+        populateStartPageOptions([]);
         return;
     }
     setPageDeleteStatus('正在加载页码...', 'info');
     try {
         const data = await fetchAdminResource(`/books/${encodeURIComponent(bookId)}/page_numbers`);
         const numbers = data.pageNumbers || [];
+        cachedPageNumbers = numbers;
+        pageDeletePageSelect.innerHTML = '';
         if (!numbers.length) {
             setPageDeleteStatus('该书暂无页面', 'info');
+            populateStartPageOptions([]);
             return;
         }
         numbers.forEach(num => {
@@ -189,11 +233,104 @@ async function loadPageNumbersForBook(bookId) {
             option.textContent = `第 ${num} 页`;
             pageDeletePageSelect.appendChild(option);
         });
+        populateStartPageOptions(numbers);
         deleteSelectedPagesBtn && (deleteSelectedPagesBtn.disabled = false);
         setPageDeleteStatus(`共 ${numbers.length} 个页面，可多选删除`, 'success');
     } catch (error) {
+        cachedPageNumbers = [];
+        populateStartPageOptions([]);
         setPageDeleteStatus(error.message || '加载页码失败', 'error');
     }
+}
+
+async function loadChaptersForBook(bookId) {
+    if (!chapterSelect) return;
+    if (!bookId) {
+        cachedChapters = [];
+        populateChapterSelect();
+        resetChapterForm();
+        setChapterStatus('请选择书籍以编辑章节', 'info');
+        return;
+    }
+    setChapterStatus('正在加载章节...', 'info');
+    try {
+        const data = await fetchAdminResource(`/books/${encodeURIComponent(bookId)}/chapters`);
+        cachedChapters = data.chapters || [];
+        populateChapterSelect();
+        setChapterStatus(`共 ${cachedChapters.length} 个章节，可选择编辑或新增`, 'success');
+    } catch (error) {
+        cachedChapters = [];
+        populateChapterSelect();
+        resetChapterForm();
+        setChapterStatus(error.message || '加载章节失败', 'error');
+    }
+}
+
+function populateChapterSelect() {
+    if (!chapterSelect) return;
+    const previous = chapterSelect.value;
+    chapterSelect.innerHTML = '<option value="">新增章节</option>';
+    cachedChapters.forEach(chapter => {
+        if (!chapter || typeof chapter.id === 'undefined') return;
+        const option = document.createElement('option');
+        option.value = chapter.id;
+        option.textContent = `#${chapter.chapterNumber ?? '?'} · ${chapter.title || '未命名章节'}`;
+        chapterSelect.appendChild(option);
+    });
+    if (previous && cachedChapters.some(ch => String(ch.id) === previous)) {
+        chapterSelect.value = previous;
+        const chapter = cachedChapters.find(ch => String(ch.id) === previous);
+        fillChapterForm(chapter);
+    } else {
+        chapterSelect.value = '';
+        resetChapterForm(true);
+    }
+}
+
+function fillChapterForm(chapter) {
+    if (!chapter) return;
+    if (chapterNumberInput) chapterNumberInput.value = chapter.chapterNumber ?? '';
+    if (chapterTitleInput) chapterTitleInput.value = chapter.title || '';
+    if (chapterSummaryInput) chapterSummaryInput.value = chapter.summary || '';
+    if (chapterStartPageSelect) {
+        if (chapter.startPage != null && !Array.from(chapterStartPageSelect.options).some(opt => Number(opt.value) === chapter.startPage)) {
+            const opt = document.createElement('option');
+            opt.value = chapter.startPage;
+            opt.textContent = `第 ${chapter.startPage} 页`;
+            chapterStartPageSelect.appendChild(opt);
+        }
+        chapterStartPageSelect.value = chapter.startPage ?? '';
+    }
+}
+
+function resetChapterForm(keepSelection = false) {
+    if (!keepSelection && chapterSelect) chapterSelect.value = '';
+    if (chapterNumberInput) chapterNumberInput.value = '';
+    if (chapterTitleInput) chapterTitleInput.value = '';
+    if (chapterSummaryInput) chapterSummaryInput.value = '';
+    if (chapterStartPageSelect) chapterStartPageSelect.value = '';
+    if (!keepSelection) setChapterStatus('可以填写下方表单创建新章节', 'info');
+}
+
+async function saveChapter(bookId, payload) {
+    const response = await fetch(`${API_BASE}/books/${encodeURIComponent(bookId)}/chapters`, {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(payload)
+    });
+    let data = {};
+    try {
+        data = await response.json();
+    } catch (error) {}
+    if (response.status === 401 || response.status === 403) {
+        clearAdminToken();
+        showLogin();
+        throw new Error('登录已过期，请重新登录');
+    }
+    if (!response.ok) {
+        throw new Error(data.error || `保存失败 (HTTP ${response.status})`);
+    }
+    return data;
 }
 
 async function adminDeletePages(bookId, pageNumbers) {
@@ -490,15 +627,18 @@ pageDeleteBookSelect?.addEventListener('change', async () => {
         if (pageDeletePageSelect) pageDeletePageSelect.innerHTML = '';
         if (deleteSelectedPagesBtn) deleteSelectedPagesBtn.disabled = true;
         setPageDeleteStatus('请选择书籍以加载页码', 'info');
+        await loadChaptersForBook('');
         return;
     }
     await loadPageNumbersForBook(bookId);
+    await loadChaptersForBook(bookId);
 });
 
 refreshPageListBtn?.addEventListener('click', async () => {
     const bookId = pageDeleteBookSelect?.value;
     if (bookId) {
         await loadPageNumbersForBook(bookId);
+        await loadChaptersForBook(bookId);
     } else {
         await refreshBooks();
     }
@@ -527,11 +667,21 @@ deleteSelectedPagesBtn?.addEventListener('click', async () => {
         await adminDeletePages(bookId, selected);
         setPageDeleteStatus('已删除所选页面', 'success');
         await loadPageNumbersForBook(bookId);
+        await loadChaptersForBook(bookId);
         await refreshBooks();
     } catch (error) {
         setPageDeleteStatus(error.message || '删除失败', 'error');
     } finally {
         deleteSelectedPagesBtn.disabled = false;
+    }
+});
+
+pageDeletePageSelect?.addEventListener('change', () => {
+    if (!chapterStartPageSelect || !pageDeletePageSelect) return;
+    const selected = Array.from(pageDeletePageSelect.selectedOptions).map(opt => opt.value).filter(Boolean);
+    if (!selected.length) return;
+    if (!chapterSelect || !chapterSelect.value) {
+        chapterStartPageSelect.value = selected[0];
     }
 });
 
@@ -625,6 +775,8 @@ pdfUploadForm?.addEventListener('submit', async (event) => {
     }
 });
 
+if (chapterStatus) setChapterStatus('请选择书籍以编辑章节', 'info');
+
 (function attemptAutoAdminLogin() {
     const token = getAdminToken();
     if (!token) {
@@ -637,3 +789,70 @@ pdfUploadForm?.addEventListener('submit', async (event) => {
         showLogin();
     });
 })();
+chapterSelect?.addEventListener('change', () => {
+    const selectedId = chapterSelect.value;
+    if (!selectedId) {
+        resetChapterForm(true);
+        setChapterStatus('当前为创建新章节模式', 'info');
+        return;
+    }
+    const chapter = cachedChapters.find(ch => String(ch.id) === selectedId);
+    if (chapter) {
+        fillChapterForm(chapter);
+        setChapterStatus(`正在编辑章节 #${chapter.chapterNumber ?? '?'} · ${chapter.title || ''}`, 'info');
+    } else {
+        resetChapterForm(true);
+    }
+});
+
+chapterResetBtn?.addEventListener('click', () => {
+    if (chapterSelect) chapterSelect.value = '';
+    resetChapterForm();
+});
+
+chapterForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const bookId = pageDeleteBookSelect?.value;
+    if (!bookId) {
+        setChapterStatus('请先选择书籍', 'error');
+        return;
+    }
+    const chapterNumber = parseInt(chapterNumberInput?.value ?? '', 10);
+    const title = (chapterTitleInput?.value || '').trim();
+    const summary = (chapterSummaryInput?.value || '').trim();
+    const startPageValue = chapterStartPageSelect?.value ?? '';
+    const startPage = startPageValue === '' ? null : parseInt(startPageValue, 10);
+
+    if (!Number.isInteger(chapterNumber) || chapterNumber < 0) {
+        setChapterStatus('章节号必须为非负整数', 'error');
+        return;
+    }
+    if (!title) {
+        setChapterStatus('标题不能为空', 'error');
+        return;
+    }
+    if (!Number.isInteger(startPage) || startPage < 0) {
+        setChapterStatus('起始页必须为非负整数', 'error');
+        return;
+    }
+
+    const payload = {
+        chapter_id: chapterSelect?.value || undefined,
+        chapter_number: chapterNumber,
+        title,
+        summary,
+        start_page: startPage
+    };
+
+    chapterSaveBtn && (chapterSaveBtn.disabled = true);
+    setChapterStatus('正在保存章节...', 'info');
+    try {
+        await saveChapter(bookId, payload);
+        setChapterStatus('章节保存成功', 'success');
+        await loadChaptersForBook(bookId);
+    } catch (error) {
+        setChapterStatus(error.message || '保存失败', 'error');
+    } finally {
+        chapterSaveBtn && (chapterSaveBtn.disabled = false);
+    }
+});

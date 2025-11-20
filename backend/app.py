@@ -518,7 +518,7 @@ def admin_delete_book(book_id: str):
 
 @admin_bp.get('/books/<book_id>/page_numbers')
 @admin_required
-def admin_get_book_page_numbers(book_id: str):
+def admin_list_book_page_numbers(book_id: str):
     book = Book.query.get(book_id)
     if not book:
         return jsonify({'error': '�鼮������'}), 404
@@ -534,7 +534,7 @@ def admin_get_book_page_numbers(book_id: str):
 
 @admin_bp.delete('/books/<book_id>/pages')
 @admin_required
-def admin_delete_book_pages(book_id: str):
+def admin_delete_selected_pages(book_id: str):
     book = Book.query.get(book_id)
     if not book:
         return jsonify({'error': '�鼮������'}), 404
@@ -576,6 +576,147 @@ def admin_delete_book_pages(book_id: str):
         'book_id': book_id,
         'removedPageNumbers': page_numbers
     }), 200
+
+
+@admin_bp.get('/books/<book_id>/page_numbers')
+@admin_required
+def admin_get_book_page_numbers(book_id: str):
+    book = Book.query.get(book_id)
+    if not book:
+        return jsonify({'error': '图书不存在'}), 404
+    pages = (
+        BookPage.query.filter_by(book_id=book_id)
+        .with_entities(BookPage.page_number)
+        .order_by(BookPage.page_number.asc())
+        .all()
+    )
+    numbers = [p[0] if not hasattr(p, 'page_number') else p.page_number for p in pages]
+    return jsonify({'bookId': book_id, 'pageNumbers': numbers}), 200
+
+
+@admin_bp.delete('/books/<book_id>/pages')
+@admin_required
+def admin_delete_book_pages(book_id: str):
+    book = Book.query.get(book_id)
+    if not book:
+        return jsonify({'error': '图书不存在'}), 404
+
+    data = request.get_json(silent=True) or {}
+    raw_numbers = data.get('page_numbers')
+    if not isinstance(raw_numbers, list) or not raw_numbers:
+        return jsonify({'error': '请提供要删除的页码列表'}), 400
+
+    try:
+        page_numbers = sorted({int(num) for num in raw_numbers})
+    except (TypeError, ValueError):
+        return jsonify({'error': '页码必须为整数'}), 400
+
+    pages_query = (
+        BookPage.query.filter_by(book_id=book_id)
+        .filter(BookPage.page_number.in_(page_numbers))
+    )
+    found_pages = pages_query.all()
+    if not found_pages:
+        return jsonify({'error': '未找到对应的页码'}), 404
+
+    storage_root = Path(__file__).resolve().parent / 'src'
+
+    try:
+        for page in found_pages:
+            dir_path = storage_root / book_id / str(page.page_number)
+            if dir_path.exists():
+                shutil.rmtree(dir_path, ignore_errors=True)
+            db.session.delete(page)
+        db.session.commit()
+    except Exception:  # noqa: BLE001
+        db.session.rollback()
+        app.logger.exception('Admin delete specific pages failed')
+        return jsonify({'error': '删除指定页时发生错误'}), 500
+
+    return jsonify({
+        'message': '指定页已删除',
+        'book_id': book_id,
+        'removedPageNumbers': page_numbers
+    }), 200
+
+
+@admin_bp.get('/books/<book_id>/chapters')
+@admin_required
+def admin_list_book_chapters(book_id: str):
+    book = Book.query.get(book_id)
+    if not book:
+        return jsonify({'error': '图书不存在'}), 404
+    chapters = (
+        BookChapter.query.filter_by(book_id=book_id)
+        .order_by(BookChapter.chapter_number.asc())
+        .all()
+    )
+    items = [{
+        'id': chapter.id,
+        'chapterNumber': chapter.chapter_number,
+        'title': chapter.title,
+        'summary': chapter.summary,
+        'startPage': chapter.start_page
+    } for chapter in chapters]
+    return jsonify({'bookId': book_id, 'chapters': items}), 200
+
+
+@admin_bp.post('/books/<book_id>/chapters')
+@admin_required
+def admin_save_book_chapter_details(book_id: str):
+    book = Book.query.get(book_id)
+    if not book:
+        return jsonify({'error': '图书不存在'}), 404
+
+    data = request.get_json(silent=True) or {}
+    chapter_id = data.get('chapter_id')
+    chapter_number = data.get('chapter_number')
+    title = (data.get('title') or '').strip()
+    summary = (data.get('summary') or '').strip()
+    start_page = data.get('start_page')
+
+    try:
+        chapter_number = int(chapter_number)
+        start_page = int(start_page)
+    except (TypeError, ValueError):
+        return jsonify({'error': '章节号与起始页必须为整数'}), 400
+
+    if chapter_number < 0 or start_page < 0:
+        return jsonify({'error': '章节号与起始页必须为非负整数'}), 400
+    if not title:
+        return jsonify({'error': '标题不能为空'}), 400
+
+    if chapter_id:
+        chapter = BookChapter.query.filter_by(id=chapter_id, book_id=book_id).first()
+        if not chapter:
+            return jsonify({'error': '指定章节不存在'}), 404
+    else:
+        chapter = BookChapter(book=book)
+        db.session.add(chapter)
+
+    chapter.chapter_number = chapter_number
+    chapter.title = title
+    chapter.summary = summary
+    chapter.start_page = start_page
+
+    try:
+        db.session.commit()
+    except Exception:  # noqa: BLE001
+        db.session.rollback()
+        app.logger.exception('Admin save chapter failed')
+        return jsonify({'error': '章节保存失败'}), 500
+
+    return jsonify({
+        'message': '章节已保存',
+        'chapter': {
+            'id': chapter.id,
+            'chapterNumber': chapter.chapter_number,
+            'title': chapter.title,
+            'summary': chapter.summary,
+            'startPage': chapter.start_page
+        }
+    }), 200
+
 def admin_list_dictionaries():
     dictionaries = Dictionary.query.all()
     items = []
