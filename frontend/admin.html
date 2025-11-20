@@ -66,21 +66,24 @@
                     请选择左侧模块来查看或维护数据。
                 </div>
 
-                <section data-panel-content="books" class="hidden bg-white shadow rounded-lg p-6 flex flex-col">
-                    <div class="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-4 mb-4">
-                        <div>
-                            <h4 class="text-base font-semibold text-gray-800">原始书籍分页</h4>
-                            <p class="text-xs text-gray-500 mt-1">上传 PDF 文件，系统会逐页写入 book_page 表</p>
+                                <section data-panel-content="books" class="hidden space-y-6">
+                    <div class="bg-white border-2 border-gray-200 shadow rounded-lg p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h4 class="text-base font-semibold text-gray-800">原始书籍分页</h4>
+                                <p class="text-xs text-gray-500 mt-1">上传 PDF / MinerU HTML，由系统解析成 book_page</p>
+                            </div>
+                            <span class="inline-flex items-center px-2 py-1 text-xs font-semibold text-blue-600 bg-blue-50 rounded-full">导入</span>
                         </div>
                         <form id="pdf-upload-form" class="mt-4 space-y-3">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">PDF 文件</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">文件</label>
                                 <input type="file" id="pdf-file" name="file" accept=".pdf,.html,.htm" class="w-full text-sm" multiple>
                             </div>
                             <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">书籍标题（可选）</label>
-                                    <input type="text" id="pdf-title" name="title" placeholder="默认为文件名" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <input type="text" id="pdf-title" name="title" placeholder="默认使用文件名" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">书籍 ID（可选）</label>
@@ -89,18 +92,18 @@
                             </div>
                             <div class="grid gap-3 sm:grid-cols-2">
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">默认词典 ID（可选）</label>
-                                    <input type="text" id="pdf-dictionary-id" name="default_dictionary_id" placeholder="例如 process_safety_dict" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">默认词典 ID</label>
+                                    <input type="text" id="pdf-dictionary-id" name="default_dictionary_id" placeholder="如 process_safety_dict" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">描述（可选）</label>
-                                    <input type="text" id="pdf-description" name="description" placeholder="简单说明来源" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">描述信息</label>
+                                    <input type="text" id="pdf-description" name="description" placeholder="便于说明数据来源" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">来源</label>
                                     <select id="pdf-origin" name="origin" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                        <option value="default" selected>default（PDF 分页）</option>
-                                        <option value="MinerU">MinerU（HTML 直接导入）</option>
+                                        <option value="default" selected>default（PDF 自动分页）</option>
+                                        <option value="MinerU">MinerU（HTML 导入）</option>
                                     </select>
                                 </div>
                             </div>
@@ -110,11 +113,12 @@
                             </div>
                         </form>
                     </div>
-                    <div class="border border-gray-200 rounded-lg p-4 mb-6">
+
+                    <div class="bg-white border-2 border-gray-200 shadow rounded-lg p-6">
                         <div class="flex items-center justify-between">
                             <div>
                                 <h4 class="text-base font-semibold text-gray-800">删除书籍的指定页</h4>
-                                <p class="text-xs text-gray-500 mt-1">选择一本书并勾选要移除的页码，系统会同步清理文件。</p>
+                                <p class="text-xs text-gray-500 mt-1">选择一本书并勾选要移除的页码，系统会同步清理文件</p>
                             </div>
                             <button id="refresh-page-list" class="text-sm text-blue-600 hover:text-blue-500">刷新列表</button>
                         </div>
@@ -128,7 +132,7 @@
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">页码（可多选）</label>
                                 <select id="page-delete-page-select" multiple size="6" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"></select>
-                                <p class="text-xs text-gray-500 mt-1">按住 Ctrl / Cmd 可多选多个页码。</p>
+                                <p class="text-xs text-gray-500 mt-1">按住 Ctrl / Cmd 可多选多个页码</p>
                             </div>
                         </div>
                         <div class="mt-4 flex items-center space-x-3">
@@ -137,10 +141,10 @@
                         </div>
                     </div>
 
-                    <div class="border border-gray-200 rounded-lg p-4 mb-6">
+                    <div class="bg-white border-2 border-gray-200 shadow rounded-lg p-6">
                         <div>
                             <h4 class="text-base font-semibold text-gray-800">章节信息管理</h4>
-                            <p class="text-xs text-gray-500 mt-1">选择书籍后可新增或编辑章节，选择起始页时会使用上方的页码列表。</p>
+                            <p class="text-xs text-gray-500 mt-1">选择书籍后可新增或编辑章节，起始页选项来自上方页码列表</p>
                         </div>
                         <form id="chapter-form" class="mt-4 space-y-3">
                             <div class="grid gap-3 md:grid-cols-2">
@@ -149,7 +153,7 @@
                                     <select id="chapter-select" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
                                         <option value="">新增章节</option>
                                     </select>
-                                    <p class="text-xs text-gray-500 mt-1">选择现有章节以编辑，或保持“新增章节”创建新记录。</p>
+                                    <p class="text-xs text-gray-500 mt-1">选择现有章节以编辑，或保持“新增章节”创建新记录</p>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">章节号</label>
@@ -177,17 +181,19 @@
                             </div>
                         </form>
                     </div>
-                    <div class="flex items-center justify-between mb-3">
-                        <div>
-                            <h3 class="text-lg font-semibold text-gray-800">书籍管理</h3>
-                            <p class="text-xs text-gray-500">查看当前入库的书籍列表</p>
-                        </div>
-                        <button id="refresh-books" class="text-sm text-blue-600 hover:text-blue-500">刷新</button>
-                    </div>
-                    <div id="admin-books" class="flex-1 bg-gray-50 rounded-md p-3 text-sm overflow-auto min-h-[200px] space-y-3"></div>
-                </section>
 
-                <section data-panel-content="dictionaries" class="hidden bg-white shadow rounded-lg p-6 flex flex-col mt-6">
+                    <div class="bg-white border-2 border-gray-200 shadow rounded-lg p-6">
+                        <div class="flex items-center justify-between mb-3">
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-800">书籍列表</h3>
+                                <p class="text-xs text-gray-500">查看当前所有书籍，支持整体删除</p>
+                            </div>
+                            <button id="refresh-books" class="text-sm text-blue-600 hover:text-blue-500">刷新</button>
+                        </div>
+                        <div id="admin-books" class="flex-1 bg-gray-50 rounded-md p-3 text-sm overflow-auto min-h-[200px] space-y-3 border border-dashed border-gray-200"></div>
+                    </div>
+                </section>
+<section data-panel-content="dictionaries" class="hidden bg-white shadow rounded-lg p-6 flex flex-col mt-6">
                     <div class="flex items-center justify-between mb-3">
                         <div>
                             <h3 class="text-lg font-semibold text-gray-800">词典管理</h3>
