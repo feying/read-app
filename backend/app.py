@@ -51,6 +51,7 @@ if not ADMIN_EMAIL or not ADMIN_PASSWORD:
     raise SystemExit("请在 .env 中配置 ADMIN_EMAIL 与 ADMIN_PASSWORD 以启用后台管理登录。")
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
+ALLOWED_ORIGINS = {"http://localhost:8080", "http://127.0.0.1:8080"}
 
 
 def admin_required(fn):
@@ -62,6 +63,23 @@ def admin_required(fn):
             return jsonify({'error': 'Forbidden'}), 403
         return fn(*args, **kwargs)
     return wrapper
+
+
+@admin_bp.after_request
+def add_admin_cors(response):
+    origin = request.headers.get('Origin')
+    if origin in ALLOWED_ORIGINS:
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+    return response
+
+
+@admin_bp.route('/<path:_dummy>', methods=['OPTIONS'])
+def admin_options(_dummy: str):
+    resp = jsonify({'status': 'ok'})
+    return add_admin_cors(resp), 200
 
 # --- Database models ---
 class User(db.Model):
@@ -717,6 +735,8 @@ def admin_save_book_chapter_details(book_id: str):
         }
     }), 200
 
+@admin_bp.get('/dictionaries')
+@admin_required
 def admin_list_dictionaries():
     dictionaries = Dictionary.query.all()
     items = []
