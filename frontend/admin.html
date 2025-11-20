@@ -193,15 +193,89 @@
                         <div id="admin-books" class="flex-1 bg-gray-50 rounded-md p-3 text-sm overflow-auto min-h-[200px] space-y-3 border border-dashed border-gray-200"></div>
                     </div>
                 </section>
-<section data-panel-content="dictionaries" class="hidden bg-white shadow rounded-lg p-6 flex flex-col mt-6">
-                    <div class="flex items-center justify-between mb-3">
+<section data-panel-content="dictionaries" class="hidden flex flex-col mt-6 space-y-4">
+                    <div class="flex items-center justify-between bg-white shadow rounded-lg p-4">
                         <div>
                             <h3 class="text-lg font-semibold text-gray-800">词典管理</h3>
-                            <p class="text-xs text-gray-500">查看词典摘要（后续可扩展 CRUD）</p>
+                            <p class="text-xs text-gray-500">查看词典，支持 CSV 导出/覆盖导入/新增</p>
+                            <p id="dictionary-status" class="text-xs text-gray-500 mt-1"></p>
                         </div>
                         <button id="refresh-dictionaries" class="text-sm text-blue-600 hover:text-blue-500">刷新</button>
                     </div>
-                    <pre id="admin-dictionaries" class="flex-1 bg-gray-50 rounded-md p-3 text-xs overflow-auto min-h-[200px]"></pre>
+
+                    <div class="grid gap-4 lg:grid-cols-3">
+                        <div class="bg-white shadow rounded-lg p-4 lg:col-span-2">
+                            <div class="flex items-center justify-between mb-3">
+                                <div>
+                                    <h4 class="text-base font-semibold text-gray-800">词典列表</h4>
+                                    <p class="text-xs text-gray-500">状态、名称、条目数以及 CSV 导出</p>
+                                </div>
+                            </div>
+                            <div class="overflow-x-auto border border-gray-200 rounded-md">
+                                <table class="min-w-full text-left text-sm text-gray-800">
+                                    <thead class="bg-gray-100 text-xs font-semibold uppercase tracking-wide text-gray-600">
+                                        <tr>
+                                            <th class="px-4 py-3">名称</th>
+                                            <th class="px-4 py-3">ID</th>
+                                            <th class="px-4 py-3">条目数</th>
+                                            <th class="px-4 py-3 text-right">导出/预览</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="dictionary-table-body" class="divide-y divide-gray-100">
+                                        <tr>
+                                            <td colspan="4" class="px-4 py-3 text-sm text-gray-500 text-center">等待加载...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="bg-white shadow rounded-lg p-4 space-y-3">
+                            <div>
+                                <h4 class="text-base font-semibold text-gray-800">覆盖导入词典</h4>
+                                <p class="text-xs text-gray-500">选择词典后上传 CSV，数据会覆盖原有内容</p>
+                            </div>
+                            <form id="dictionary-import-form" class="space-y-3">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">选择词典</label>
+                                    <select id="dictionary-import-select" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                                        <option value="">等待列表...</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">CSV 文件</label>
+                                    <input type="file" id="dictionary-import-file" accept=".csv" class="text-sm">
+                                    <p class="text-xs text-gray-500 mt-1">CSV 应包含 word/translation 列；文件内的 id/name 仅用于校验，以当前选中词典为准</p>
+                                </div>
+                                <p id="dictionary-import-status" class="text-xs text-gray-500"></p>
+                                <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-md text-sm hover:bg-blue-700">导入并覆盖</button>
+                            </form>
+                        </div>
+
+                        <div class="bg-white shadow rounded-lg p-4 space-y-3">
+                            <div>
+                                <h4 class="text-base font-semibold text-gray-800">新增词典</h4>
+                                <p class="text-xs text-gray-500">id 和 name 以管理员输入为准，CSV 内的 id/name 会被忽略</p>
+                            </div>
+                            <form id="dictionary-create-form" class="space-y-3">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">词典 ID</label>
+                                    <input type="text" id="dictionary-create-id" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" placeholder="例如 process_safety_dict">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">词典名称</label>
+                                    <input type="text" id="dictionary-create-name" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" placeholder="例如 化工安全词典">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">CSV 文件</label>
+                                    <input type="file" id="dictionary-create-file" accept=".csv" class="text-sm">
+                                    <p class="text-xs text-gray-500 mt-1">CSV 需包含 word/translation 列，文件内的 id/name 会被忽略</p>
+                                </div>
+                                <p id="dictionary-create-status" class="text-xs text-gray-500"></p>
+                                <button type="submit" class="w-full bg-green-600 text-white py-2 rounded-md text-sm hover:bg-green-700">创建词典</button>
+                            </form>
+                        </div>
+                    </div>
                 </section>
 
                 <section data-panel-content="users" class="hidden bg-white shadow rounded-lg p-6 flex flex-col mt-6">
@@ -221,5 +295,3 @@
     <script type="module" src="js/admin.js?v=20250207"></script>
 </body>
 </html>
-
-

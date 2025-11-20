@@ -9,7 +9,17 @@ const loginError = document.getElementById('admin-login-error');
 const identityLabel = document.getElementById('admin-identity');
 const logoutBtn = document.getElementById('admin-logout-btn');
 const booksOutput = document.getElementById('admin-books');
-const dictionariesOutput = document.getElementById('admin-dictionaries');
+const dictionaryTableBody = document.getElementById('dictionary-table-body');
+const dictionaryStatus = document.getElementById('dictionary-status');
+const dictionaryImportForm = document.getElementById('dictionary-import-form');
+const dictionaryImportSelect = document.getElementById('dictionary-import-select');
+const dictionaryImportFile = document.getElementById('dictionary-import-file');
+const dictionaryImportStatus = document.getElementById('dictionary-import-status');
+const dictionaryCreateForm = document.getElementById('dictionary-create-form');
+const dictionaryCreateIdInput = document.getElementById('dictionary-create-id');
+const dictionaryCreateNameInput = document.getElementById('dictionary-create-name');
+const dictionaryCreateFileInput = document.getElementById('dictionary-create-file');
+const dictionaryCreateStatus = document.getElementById('dictionary-create-status');
 const usersOutput = document.getElementById('admin-users');
 const refreshBooksBtn = document.getElementById('refresh-books');
 const refreshDictionariesBtn = document.getElementById('refresh-dictionaries');
@@ -50,6 +60,7 @@ const HTML_ESCAPE_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;',
 let cachedBookList = [];
 let cachedPageNumbers = [];
 let cachedChapters = [];
+let cachedDictionaries = [];
 
 function getAdminToken() {
     return localStorage.getItem(ADMIN_TOKEN_KEY);
@@ -186,6 +197,18 @@ function setChapterStatus(message = '', variant = 'info') {
             ? 'text-green-600'
             : 'text-gray-500';
     chapterStatus.classList.add(colorClass);
+}
+
+function setStatusElement(el, message = '', variant = 'info') {
+    if (!el) return;
+    el.textContent = message;
+    el.classList.remove('text-gray-500', 'text-red-500', 'text-green-600');
+    const colorClass = variant === 'error'
+        ? 'text-red-500'
+        : variant === 'success'
+            ? 'text-green-600'
+            : 'text-gray-500';
+    el.classList.add(colorClass);
 }
 
 
@@ -469,14 +492,89 @@ async function refreshBooks() {
     }
 }
 
+function renderDictionaryList(items = []) {
+    cachedDictionaries = Array.isArray(items) ? items : [];
+    if (!dictionaryTableBody) return;
+    if (!cachedDictionaries.length) {
+        dictionaryTableBody.innerHTML = `
+            <tr>
+                <td colspan="4" class="px-4 py-3 text-sm text-gray-500 text-center">暂无词典</td>
+            </tr>
+        `;
+        return;
+    }
+    const rows = cachedDictionaries.map((item, index) => {
+        const rowStripe = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+        const preview = (item.preview || []).map(([k, v]) => `${k}: ${v}`).join('; ');
+        return `
+            <tr class="${rowStripe}">
+                <td class="px-4 py-3 text-sm font-semibold text-gray-800">${escapeHtml(item.name || '-') }</td>
+                <td class="px-4 py-3 text-xs font-mono text-gray-700 break-all">${escapeHtml(item.id || '-')}</td>
+                <td class="px-4 py-3 text-sm text-gray-700">${item.entryCount ?? 0}</td>
+                <td class="px-4 py-3 text-sm text-right space-x-2">
+                    <button
+                        class="export-dict-btn text-blue-600 hover:text-blue-500 text-xs font-semibold"
+                        data-action="export-dict"
+                        data-dict-id="${escapeHtml(item.id || '')}"
+                    >导出 CSV</button>
+                    <span class="text-xs text-gray-400">${escapeHtml(preview)}</span>
+                </td>
+            </tr>
+        `;
+    }).join('');
+    dictionaryTableBody.innerHTML = rows;
+}
+
+function populateDictionarySelect() {
+    if (!dictionaryImportSelect) return;
+    const previous = dictionaryImportSelect.value;
+    dictionaryImportSelect.innerHTML = '<option value="">请选择要覆盖的词典</option>';
+    cachedDictionaries.forEach(item => {
+        if (!item || !item.id) return;
+        const option = document.createElement('option');
+        option.value = item.id;
+        option.textContent = `${item.name || item.id}（${item.id}）`;
+        dictionaryImportSelect.appendChild(option);
+    });
+    if (previous && cachedDictionaries.some(item => item.id === previous)) {
+        dictionaryImportSelect.value = previous;
+    }
+}
+
 async function refreshDictionaries() {
-    dictionariesOutput.textContent = 'Loading...';
+    setStatusElement(dictionaryStatus, 'Loading...', 'info');
     try {
         const data = await fetchAdminResource('/dictionaries');
-        dictionariesOutput.textContent = JSON.stringify(data.items, null, 2);
+        renderDictionaryList(data.items || []);
+        populateDictionarySelect();
+        setStatusElement(dictionaryStatus, `共 ${data.items?.length ?? 0} 个词典`, 'success');
     } catch (error) {
-        dictionariesOutput.textContent = error.message;
+        renderDictionaryList([]);
+        setStatusElement(dictionaryStatus, error.message || '加载失败', 'error');
     }
+}
+
+async function downloadDictionaryCsv(dictId) {
+    const response = await fetch(`${API_BASE}/dictionaries/${encodeURIComponent(dictId)}/export_csv`, {
+        headers: authHeaders()
+    });
+    if (response.status === 401 || response.status === 403) {
+        clearAdminToken();
+        showLogin();
+        throw new Error('登录已过期，请重新登录');
+    }
+    if (!response.ok) {
+        throw new Error(`导出失败 (HTTP ${response.status})`);
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${dictId}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
 async function refreshUsers() {
@@ -569,16 +667,26 @@ async function showPanel(panelName) {
     highlightNav(panelName);
 
     if (!found) return;
-    switch (panelName) {
-        case 'books':
-            await refreshBooks();
-            break;
-        case 'dictionaries':
-            await refreshDictionaries();
-            break;
-        case 'users':
-            await refreshUsers();
-            break;
+
+    try {
+        switch (panelName) {
+            case 'books':
+                await refreshBooks();
+                break;
+            case 'dictionaries':
+                await refreshDictionaries();
+                break;
+            case 'users':
+                await refreshUsers();
+                break;
+        }
+    } catch (error) {
+        // 已在 fetchAdminResource 处理 401/403，这里防止未捕获异常刷日志
+        const message = error?.message || '加载失败';
+        if (panelName === 'books' && booksOutput) booksOutput.textContent = message;
+        if (panelName === 'dictionaries') setStatusElement(dictionaryStatus, message, 'error');
+        if (panelName === 'users' && usersOutput) usersOutput.textContent = message;
+        console.warn('showPanel error:', error);
     }
 }
 
@@ -619,6 +727,109 @@ sidebarCloseBtn?.addEventListener('click', () => toggleSidebar(false));
 
 backBtn?.addEventListener('click', () => {
     window.location.href = 'index.html';
+});
+
+dictionaryTableBody?.addEventListener('click', async (event) => {
+    const btn = event.target.closest('[data-action="export-dict"]');
+    if (!btn) return;
+    const dictId = btn.dataset.dictId;
+    if (!dictId) return;
+    setStatusElement(dictionaryStatus, `正在导出 ${dictId}...`, 'info');
+    try {
+        await downloadDictionaryCsv(dictId);
+        setStatusElement(dictionaryStatus, '导出完成', 'success');
+    } catch (error) {
+        setStatusElement(dictionaryStatus, error.message || '导出失败', 'error');
+    }
+});
+
+dictionaryImportForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const dictId = dictionaryImportSelect?.value || '';
+    const file = dictionaryImportFile?.files?.[0];
+    const submitBtn = dictionaryImportForm.querySelector('button[type="submit"]');
+    if (!dictId) {
+        setStatusElement(dictionaryImportStatus, '请选择要覆盖的词典', 'error');
+        return;
+    }
+    if (!file) {
+        setStatusElement(dictionaryImportStatus, '请上传 CSV 文件', 'error');
+        return;
+    }
+    submitBtn && (submitBtn.disabled = true);
+    setStatusElement(dictionaryImportStatus, '正在导入并覆盖...', 'info');
+    try {
+        const formData = new FormData();
+        formData.set('file', file);
+        const response = await fetch(`${API_BASE}/dictionaries/${encodeURIComponent(dictId)}/import_csv`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: formData
+        });
+        let data = {};
+        try { data = await response.json(); } catch (e) {}
+        if (response.status === 401 || response.status === 403) {
+            clearAdminToken();
+            showLogin();
+            throw new Error('登录已过期，请重新登录');
+        }
+        if (!response.ok) {
+            throw new Error(data.error || `导入失败 (HTTP ${response.status})`);
+        }
+        setStatusElement(dictionaryImportStatus, data.message || '导入成功', 'success');
+        dictionaryImportForm.reset();
+        await refreshDictionaries();
+    } catch (error) {
+        setStatusElement(dictionaryImportStatus, error.message || '导入失败', 'error');
+    } finally {
+        submitBtn && (submitBtn.disabled = false);
+    }
+});
+
+dictionaryCreateForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const dictId = (dictionaryCreateIdInput?.value || '').trim();
+    const name = (dictionaryCreateNameInput?.value || '').trim();
+    const file = dictionaryCreateFileInput?.files?.[0];
+    const submitBtn = dictionaryCreateForm.querySelector('button[type="submit"]');
+    if (!dictId || !name) {
+        setStatusElement(dictionaryCreateStatus, '请填写 id 和 name', 'error');
+        return;
+    }
+    if (!file) {
+        setStatusElement(dictionaryCreateStatus, '请上传 CSV 文件', 'error');
+        return;
+    }
+    submitBtn && (submitBtn.disabled = true);
+    setStatusElement(dictionaryCreateStatus, '正在创建词典...', 'info');
+    try {
+        const formData = new FormData();
+        formData.set('id', dictId);
+        formData.set('name', name);
+        formData.set('file', file);
+        const response = await fetch(`${API_BASE}/dictionaries`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: formData
+        });
+        let data = {};
+        try { data = await response.json(); } catch (e) {}
+        if (response.status === 401 || response.status === 403) {
+            clearAdminToken();
+            showLogin();
+            throw new Error('登录已过期，请重新登录');
+        }
+        if (!response.ok) {
+            throw new Error(data.error || `创建失败 (HTTP ${response.status})`);
+        }
+        setStatusElement(dictionaryCreateStatus, data.message || '创建成功', 'success');
+        dictionaryCreateForm.reset();
+        await refreshDictionaries();
+    } catch (error) {
+        setStatusElement(dictionaryCreateStatus, error.message || '创建失败', 'error');
+    } finally {
+        submitBtn && (submitBtn.disabled = false);
+    }
 });
 
 pageDeleteBookSelect?.addEventListener('change', async () => {

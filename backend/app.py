@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, Blueprint, send_from_directory
+from flask import Flask, request, jsonify, Blueprint, send_from_directory, Response
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from flask_jwt_extended import (
@@ -15,6 +15,8 @@ import os
 import json
 import re
 import html
+import csv
+import io
 from io import BytesIO
 from pathlib import Path
 from datetime import timedelta
@@ -245,6 +247,81 @@ def rewrite_src_to_absolute(html_content: str, base_url: str) -> str:
     pattern_absolute = re.compile(r'src=[\'"]https?://[^\'"]+/src/([^\'"]+)[\'"]', flags=re.IGNORECASE)
     rewritten = pattern_absolute.sub(lambda m: f'src="{base}/src/{m.group(1)}"', html_content)
     return pattern_relative.sub(lambda m: f'src="{base}/src/{m.group(1)}"', rewritten)
+
+
+KEY_ALIASES = {'word', 'term', 'key', 'entry'}
+VALUE_ALIASES = {'translation', 'value', 'meaning', 'definition'}
+
+
+def parse_dictionary_csv(file_storage, ignore_id_name: bool = False):
+    """
+    Parse an uploaded CSV into a dict of word -> translation.
+    Expected header includes word/term/key/entry and translation/value/meaning/definition.
+    Returns (entries_dict, csv_id, csv_name).
+    """
+    content = file_storage.read()
+    if not content:
+        raise ValueError('CSV 文件为空')
+    try:
+        text = content.decode('utf-8-sig')
+    except Exception:
+        text = content.decode(errors='ignore')
+
+    reader = csv.DictReader(io.StringIO(text))
+    if not reader.fieldnames:
+        raise ValueError('CSV 缺少表头')
+
+    fieldnames = [f.strip() for f in reader.fieldnames if f is not None]
+    lowers = [f.lower() for f in fieldnames]
+
+    id_col = None if ignore_id_name else next((f for f, l in zip(fieldnames, lowers) if l == 'id'), None)
+    name_col = None if ignore_id_name else next((f for f, l in zip(fieldnames, lowers) if l == 'name'), None)
+    key_col = next((f for f, l in zip(fieldnames, lowers) if l in KEY_ALIASES), None)
+    value_col = next((f for f, l in zip(fieldnames, lowers) if l in VALUE_ALIASES), None)
+
+    # Fallback to first non-id/name column as key, second as value
+    usable_cols = [f for f in fieldnames if f not in {id_col, name_col}]
+    if not key_col and usable_cols:
+        key_col = usable_cols[0]
+    if not value_col and len(usable_cols) >= 2:
+        value_col = usable_cols[1]
+
+    if not key_col or not value_col:
+        raise ValueError('CSV 需要包含词条和释义两列')
+
+    entries = {}
+    csv_id_value = None
+    csv_name_value = None
+
+    for row in reader:
+        if csv_id_value is None and id_col and row.get(id_col):
+            csv_id_value = str(row.get(id_col)).strip()
+        if csv_name_value is None and name_col and row.get(name_col):
+            csv_name_value = str(row.get(name_col)).strip()
+
+        key = str(row.get(key_col) or '').strip()
+        value = str(row.get(value_col) or '').strip()
+        if not key:
+            continue
+        entries[key] = value
+
+    if not entries:
+        raise ValueError('CSV 未解析到任何词条')
+
+    return entries, csv_id_value, csv_name_value
+
+
+def build_dictionary_csv(dic: Dictionary) -> str:
+    try:
+        data = json.loads(dic.data or '{}')
+    except Exception:
+        data = {}
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['id', 'name', 'word', 'translation'])
+    for word in sorted(data.keys()):
+        writer.writerow([dic.id, dic.name, word, data.get(word, '')])
+    return output.getvalue()
 def serialize_user(user: User) -> dict:
     return {
         'id': user.id,
@@ -753,6 +830,105 @@ def admin_list_dictionaries():
             'preview': data_preview
         })
     return jsonify({'items': items}), 200
+
+
+@admin_bp.get('/dictionaries/<dict_id>/export_csv')
+@admin_required
+def admin_export_dictionary_csv(dict_id: str):
+    dic = Dictionary.query.get(dict_id)
+    if not dic:
+        return jsonify({'error': '词典不存在'}), 404
+    csv_text = build_dictionary_csv(dic)
+    filename = f'{dic.id}.csv'
+    resp = Response(csv_text, mimetype='text/csv; charset=utf-8')
+    resp.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return resp
+
+
+@admin_bp.post('/dictionaries/<dict_id>/import_csv')
+@admin_required
+def admin_import_dictionary_csv(dict_id: str):
+    dic = Dictionary.query.get(dict_id)
+    if not dic:
+        return jsonify({'error': '词典不存在'}), 404
+
+    file_storage = request.files.get('file')
+    if not file_storage:
+        return jsonify({'error': '请上传 CSV 文件'}), 400
+
+    try:
+        entries, csv_id, csv_name = parse_dictionary_csv(file_storage)
+    except ValueError as exc:
+        return jsonify({'error': str(exc)}), 400
+    except Exception:  # noqa: BLE001
+        app.logger.exception('Failed to parse dictionary CSV')
+        return jsonify({'error': '解析 CSV 失败'}), 400
+
+    if csv_id and csv_id != dict_id:
+        return jsonify({'error': 'CSV 中的 id 与目标词典不一致'}), 400
+
+    dic.data = json.dumps(entries, ensure_ascii=False)
+    if csv_name:
+        dic.name = csv_name
+    try:
+        db.session.commit()
+    except Exception:  # noqa: BLE001
+        db.session.rollback()
+        app.logger.exception('Admin import dictionary failed')
+        return jsonify({'error': '保存词典失败'}), 500
+
+    return jsonify({
+        'message': '词典数据已覆盖更新',
+        'dictionary': {
+            'id': dic.id,
+            'name': dic.name,
+            'entryCount': len(entries)
+        }
+    }), 200
+
+
+@admin_bp.post('/dictionaries')
+@admin_required
+def admin_create_dictionary():
+    dict_id = (request.form.get('id') or '').strip()
+    name = (request.form.get('name') or '').strip()
+    file_storage = request.files.get('file')
+
+    if not dict_id or not name:
+        return jsonify({'error': 'id 与 name 均为必填'}), 400
+    if not file_storage:
+        return jsonify({'error': '请上传 CSV 文件'}), 400
+
+    if Dictionary.query.get(dict_id):
+        return jsonify({'error': '词典 ID 已存在'}), 409
+    if Dictionary.query.filter_by(name=name).first():
+        return jsonify({'error': '词典名称已存在'}), 409
+
+    try:
+        entries, _, _ = parse_dictionary_csv(file_storage, ignore_id_name=True)
+    except ValueError as exc:
+        return jsonify({'error': str(exc)}), 400
+    except Exception:  # noqa: BLE001
+        app.logger.exception('Failed to parse dictionary CSV')
+        return jsonify({'error': '解析 CSV 失败'}), 400
+
+    dic = Dictionary(id=dict_id, name=name, data=json.dumps(entries, ensure_ascii=False))
+    try:
+        db.session.add(dic)
+        db.session.commit()
+    except Exception:  # noqa: BLE001
+        db.session.rollback()
+        app.logger.exception('Admin create dictionary failed')
+        return jsonify({'error': '创建词典失败'}), 500
+
+    return jsonify({
+        'message': '词典已创建',
+        'dictionary': {
+            'id': dic.id,
+            'name': dic.name,
+            'entryCount': len(entries)
+        }
+    }), 201
 
 
 @admin_bp.get('/users')
