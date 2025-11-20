@@ -1,9 +1,17 @@
+from pathlib import Path
+import sys
 from flask import Flask
 from flask_cors import CORS
 
-from backend.config import load_config, ALLOWED_ORIGINS
-from backend.extensions import db, jwt
-from backend.api import admin_bp, user_bp, library_bp, assets_bp
+# 确保以 python app.py 方式运行时也能找到 backend 包
+ROOT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = ROOT_DIR.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from backend.config import load_config, ALLOWED_ORIGINS  # noqa: E402
+from backend.extensions import db, jwt  # noqa: E402
+from backend.api import admin_bp, user_bp, library_bp, assets_bp  # noqa: E402
 
 
 def create_app() -> Flask:

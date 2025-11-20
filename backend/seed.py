@@ -1,9 +1,16 @@
 import json
+import sys
+from pathlib import Path
 from textwrap import dedent
 
-from backend.app import create_app
-from backend.extensions import db
-from backend.models import Dictionary, Book, BookPage, BookChapter
+ROOT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = ROOT_DIR.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from backend.app import create_app  # noqa: E402
+from backend.extensions import db  # noqa: E402
+from backend.models import Dictionary, Book, BookPage, BookChapter  # noqa: E402
 
 
 dictionaries_data = {
