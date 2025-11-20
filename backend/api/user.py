@@ -1,19 +1,30 @@
 from flask import request, jsonify
 from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity
+from datetime import datetime, timedelta
 
 from backend.api import user_bp
 from backend.extensions import db
 from backend.models import User
 
 
+def resolve_user_name(user: User) -> str:
+    if user.user_name:
+        return user.user_name
+    if user.email:
+        return user.email.split('@', 1)[0]
+    return f'user_{user.id or "anon"}'
+
+
 def serialize_user(user: User) -> dict:
     return {
         'id': user.id,
         'email': user.email,
+        'user_name': resolve_user_name(user),
         'api_key': user.api_key,
         'current_book_id': user.current_book_id,
         'current_page': user.current_page,
         'reading_progress': user.reading_progress,
+        'username_updated_at': user.username_updated_at.isoformat() if user.username_updated_at else None,
     }
 
 
@@ -31,15 +42,18 @@ def register():
     data = request.get_json(silent=True) or {}
     email = (data.get('email') or '').strip()
     password = data.get('password')
+    user_name = (data.get('user_name') or '').strip()
 
-    if not email or not password:
-        return jsonify({'error': '邮箱和密码是必填项'}), 400
+    if not email or not password or not user_name:
+        return jsonify({'error': '邮箱、密码、用户名都是必填项'}), 400
 
     if User.query.filter_by(email=email).first():
         return jsonify({'error': '账号已存在'}), 400
 
     user = User(email=email)
     user.set_password(password)
+    user.user_name = user_name
+    user.username_updated_at = datetime.utcnow()
     db.session.add(user)
     db.session.commit()
 
@@ -70,6 +84,32 @@ def login():
         'user': serialize_user(user),
         'token': token,
     }), 200
+
+
+@user_bp.route('/user/username', methods=['PUT'])
+@jwt_required()
+def update_username():
+    data = request.get_json(silent=True) or {}
+    new_name = (data.get('user_name') or '').strip()
+    if not new_name:
+        return jsonify({'error': '用户名不能为空'}), 400
+
+    user = User.query.get(int(get_jwt_identity()))
+    if not user:
+        return jsonify({'error': '用户不存在'}), 404
+
+    now = datetime.utcnow()
+    if user.username_updated_at:
+        delta = now - user.username_updated_at
+        if delta < timedelta(days=180):
+            left = timedelta(days=180) - delta
+            days_left = max(1, left.days)
+            return jsonify({'error': f'用户名半年内仅可修改一次，剩余 {days_left} 天后可再修改'}), 400
+
+    user.user_name = new_name
+    user.username_updated_at = now
+    db.session.commit()
+    return jsonify({'message': '用户名已更新', 'user': serialize_user(user)}), 200
 
 
 @user_bp.route('/user/api_key', methods=['PUT'])

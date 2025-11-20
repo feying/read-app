@@ -593,6 +593,7 @@ def admin_list_users():
     items = [{
         'id': user.id,
         'email': user.email,
+        'user_name': getattr(user, 'user_name', None),
         'currentBookId': user.current_book_id,
         'currentPage': user.current_page
     } for user in users]

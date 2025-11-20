@@ -1,5 +1,6 @@
 from backend.extensions import db
 import bcrypt
+from datetime import datetime
 
 
 class User(db.Model):
@@ -10,6 +11,8 @@ class User(db.Model):
     current_book_id = db.Column(db.String(100))
     current_page = db.Column(db.Integer, default=1)
     reading_progress = db.Column(db.Text)
+    user_name = db.Column(db.String(120))
+    username_updated_at = db.Column(db.DateTime)
 
     def set_password(self, password: str) -> None:
         self.password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')

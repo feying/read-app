@@ -43,12 +43,12 @@ async function getDictionaries() {
     return fetchProtectedJson('/dictionaries');
 }
 
-async function registerUser(email, password) {
+async function registerUser(email, password, userName) {
     try {
         const response = await fetch(`${API_BASE_URL}/register`, {
             method: 'POST',
             headers: buildHeaders({ 'Content-Type': 'application/json' }),
-            body: JSON.stringify({ email, password })
+            body: JSON.stringify({ email, password, user_name: userName })
         });
         return await handleJsonResponse(response);
     } catch (error) {

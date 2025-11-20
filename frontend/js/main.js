@@ -37,7 +37,7 @@ let apiKeyInput, saveKeyBtn, saveStatusEl, logoutBtn, paginationControls, printB
 let closePrintModalBtn, confirmPrintBtn, clearProgressBtn, aiModal, closeAiModalBtn, aiModalTitle;
 let aiModalLoader, aiResponseEl;
 let loginModal, closeLoginModalBtn, loginForm, loginEmail, loginPassword, loginError;
-let registerModal, closeRegisterModalBtn, registerForm, registerEmail, registerPassword, confirmPassword, registerError;
+let registerModal, closeRegisterModalBtn, registerForm, registerEmail, registerUsername, registerPassword, confirmPassword, registerError;
 let showRegisterBtn, showLoginBtn;
 let userEmailDisplay;
 let tocBtn, tocModal, closeTocModalBtn, tocList;
@@ -51,7 +51,8 @@ function updateUserEmailDisplay() {
         userEmailDisplay = document.getElementById('user-email-display');
     }
     if (userEmailDisplay) {
-        userEmailDisplay.textContent = currentUser ? currentUser.email : '未登录';
+        const name = currentUser?.user_name || currentUser?.email || '未登录';
+        userEmailDisplay.textContent = name;
     }
 }
 
@@ -714,41 +715,45 @@ function setupEventListeners() {
     });
 
     // 注册表单提交
+    // 注册表单提交
+    // 注册表单提交
+    // 注册表单提交
     registerForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const email = registerEmail.value.trim();
+        const userName = registerUsername.value.trim();
         const password = registerPassword.value;
         const confirm = confirmPassword.value;
 
-        if (!email || !password || !confirm) {
-            registerError.textContent = '请填写所有字段';
+        if (!email || !password || !confirm || !userName) {
+            registerError.textContent = 'Please fill email, username and password';
             return;
         }
         if (password !== confirm) {
-            registerError.textContent = '密码不匹配';
+            registerError.textContent = 'Passwords do not match';
             return;
         }
         if (password.length < 6) {
-            registerError.textContent = '密码长度至少6位';
+            registerError.textContent = 'Password must be at least 6 characters';
             return;
         }
 
-        registerError.textContent = '正在注册...';
-        const result = await registerUser(email, password);
+        registerError.textContent = 'Registering...';
+        const result = await registerUser(email, password, userName);
 
         if (result.success) {
-            registerError.textContent = '注册成功！正在初始化...';
+            registerError.textContent = 'Registered! Initializing...';
             establishSession(result.data.token, result.data.user);
             await loadDataAndShowApp();
             registerModal.classList.add('hidden');
         } else if (result.unauthorized) {
-            handleUnauthorizedState(result.data.error || '注册成功但授权失败');
+            handleUnauthorizedState(result.data.error || 'Registered but authorization failed');
         } else {
-            registerError.textContent = result.data.error || '注册失败';
+            registerError.textContent = result.data.error || 'Registration failed';
         }
     });
 
-    contentDiv.addEventListener('click', async (event) => {
+contentDiv.addEventListener('click', async (event) => {
         const target = event.target;
         if (target.classList.contains('word')) {
             const wordContainer = target.parentElement;
@@ -898,6 +903,7 @@ function initialize() {
     loginPassword = document.getElementById('login-password');
     loginError = document.getElementById('login-error');
     registerEmail = document.getElementById('register-email');
+    registerUsername = document.getElementById('register-username');
     registerPassword = document.getElementById('register-password');
     confirmPassword = document.getElementById('confirm-password');
     registerError = document.getElementById('register-error');
