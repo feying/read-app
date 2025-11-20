@@ -57,6 +57,15 @@ async function registerUser(email, password, userName) {
     }
 }
 
+async function updateUsername(userName) {
+    const response = await fetch(`${API_BASE_URL}/user/username`, {
+        method: 'PUT',
+        headers: buildHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ user_name: userName })
+    });
+    return await handleJsonResponse(response);
+}
+
 async function loginUser(email, password) {
     try {
         const response = await fetch(`${API_BASE_URL}/login`, {
@@ -163,4 +172,5 @@ export {
     searchBook,
     setAuthToken,
     clearAuthToken,
+    updateUsername,
 };

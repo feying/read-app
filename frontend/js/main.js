@@ -13,7 +13,8 @@ import {
     searchBook,
     getBookPageNumbers,
     setAuthToken,
-    clearAuthToken
+    clearAuthToken,
+    updateUsername
 } from './api.js';
 
 // --- \u5168\u5c40\u72b6\u6001 ---
@@ -34,6 +35,7 @@ let bookPageOrders = {}; // bookId -> sorted array of available page numbers
 // --- DOM 元素引用 ---
 let contentDiv, userBtn, userModal, closeModalBtn, libraryBtn, libraryModal, closeLibraryModalBtn, libraryList;
 let apiKeyInput, saveKeyBtn, saveStatusEl, logoutBtn, paginationControls, printBtn, printModal;
+let userUsernameDisplay, userUsernameEditBtn, userUsernameEditContainer, userUsernameInput, userUsernameSaveBtn, userUsernameCancelBtn, userUsernameStatus;
 let closePrintModalBtn, confirmPrintBtn, clearProgressBtn, aiModal, closeAiModalBtn, aiModalTitle;
 let aiModalLoader, aiResponseEl;
 let loginModal, closeLoginModalBtn, loginForm, loginEmail, loginPassword, loginError;
@@ -46,14 +48,22 @@ let mainContainer; // 新增：主内容容器引用
 
 // --- \u8fdb\u5ea6\u7ba1\u7406 ---
 // (\u8fd9\u90e8\u5206\u51fd\u6570 getProgressKey, saveProgress, loadProgress, applyProgress \u4fdd\u6301\u4e0d\u53d8)
+
 function updateUserEmailDisplay() {
     if (!userEmailDisplay) {
         userEmailDisplay = document.getElementById('user-email-display');
     }
     if (userEmailDisplay) {
-        const name = currentUser?.user_name || currentUser?.email || '未登录';
+        const name = currentUser?.user_name || currentUser?.email || 'Not logged in';
         userEmailDisplay.textContent = name;
     }
+}
+
+function updateUserProfileView() {
+    const name = currentUser?.user_name || currentUser?.email || '-';
+    if (userUsernameDisplay) userUsernameDisplay.textContent = name;
+    if (userEmailDisplay) userEmailDisplay.textContent = currentUser?.email || '-';
+    if (userUsernameInput && currentUser?.user_name) userUsernameInput.value = currentUser.user_name;
 }
 
 function establishSession(token, user) {
@@ -63,6 +73,7 @@ function establishSession(token, user) {
     localStorage.setItem('auth_token', token);
     localStorage.setItem('current_user', JSON.stringify(user));
     updateUserEmailDisplay();
+    updateUserProfileView();
 }
 
 function handleUnauthorizedState(message = '登录已过期，请重新登录') {
@@ -76,6 +87,7 @@ function handleUnauthorizedState(message = '登录已过期，请重新登录') 
     bookPageOrders = {};
     localStorage.clear();
     updateUserEmailDisplay();
+    updateUserProfileView();
     if (contentDiv) {
         contentDiv.innerHTML = '';
     }
@@ -111,6 +123,7 @@ async function attemptAutoLogin() {
         }
     }
     updateUserEmailDisplay();
+    updateUserProfileView();
     try {
         const meResult = await getCurrentUser();
         if (meResult.success) {
@@ -904,12 +917,20 @@ function initialize() {
     loginError = document.getElementById('login-error');
     registerEmail = document.getElementById('register-email');
     registerUsername = document.getElementById('register-username');
+    userUsernameDisplay = document.getElementById('user-username-display');
+    userUsernameEditBtn = document.getElementById('user-username-edit-btn');
+    userUsernameEditContainer = document.getElementById('user-username-edit');
+    userUsernameInput = document.getElementById('user-username-input');
+    userUsernameSaveBtn = document.getElementById('user-username-save-btn');
+    userUsernameCancelBtn = document.getElementById('user-username-cancel-btn');
+    userUsernameStatus = document.getElementById('user-username-status');
     registerPassword = document.getElementById('register-password');
     confirmPassword = document.getElementById('confirm-password');
     registerError = document.getElementById('register-error');
     showRegisterBtn = document.getElementById('show-register-btn');
     showLoginBtn = document.getElementById('show-login-btn');
     updateUserEmailDisplay();
+    updateUserProfileView();
 
     // 2. \u521d\u59cb\u5316\u7528\u6237\u4fe1\u606f
     document.getElementById('user-email-display').textContent = "\u672a\u767b\u5f55";
