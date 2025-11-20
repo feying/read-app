@@ -72,4 +72,6 @@ def build_dictionary_csv(dic) -> str:
     writer.writerow(['id', 'name', 'word', 'translation'])
     for word in sorted(data.keys()):
         writer.writerow([dic.id, dic.name, word, data.get(word, '')])
-    return output.getvalue()
+    csv_body = output.getvalue()
+    # 前置 BOM 以便 Windows Excel 正确识别 UTF-8，避免中文乱码
+    return "\ufeff" + csv_body
