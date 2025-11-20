@@ -566,6 +566,26 @@ def admin_create_dictionary():
     }), 201
 
 
+@admin_bp.delete('/dictionaries/<dict_id>')
+@admin_required
+def admin_delete_dictionary(dict_id: str):
+    dic = Dictionary.query.get(dict_id)
+    if not dic:
+        return jsonify({'error': '词典不存在'}), 404
+    try:
+        # 清空引用默认词典的书籍设置
+        Book.query.filter(Book.default_dictionary_id == dict_id).update(
+            {Book.default_dictionary_id: None}, synchronize_session=False
+        )
+        db.session.delete(dic)
+        db.session.commit()
+    except Exception:  # noqa: BLE001
+        db.session.rollback()
+        current_app.logger.exception('Admin delete dictionary failed')
+        return jsonify({'error': '删除词典失败'}), 500
+    return jsonify({'message': '词典已删除', 'dictionary_id': dict_id}), 200
+
+
 @admin_bp.get('/users')
 @admin_required
 def admin_list_users():

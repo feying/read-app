@@ -517,6 +517,11 @@ function renderDictionaryList(items = []) {
                         data-action="export-dict"
                         data-dict-id="${escapeHtml(item.id || '')}"
                     >导出 CSV</button>
+                    <button
+                        class="delete-dict-btn text-red-600 hover:text-red-500 text-xs font-semibold"
+                        data-action="delete-dict"
+                        data-dict-id="${escapeHtml(item.id || '')}"
+                    >删除</button>
                     <span class="text-xs text-gray-400">${escapeHtml(preview)}</span>
                 </td>
             </tr>
@@ -575,6 +580,24 @@ async function downloadDictionaryCsv(dictId) {
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+async function deleteDictionary(dictId) {
+    const response = await fetch(`${API_BASE}/dictionaries/${encodeURIComponent(dictId)}`, {
+        method: 'DELETE',
+        headers: authHeaders()
+    });
+    let data = {};
+    try { data = await response.json(); } catch (e) {}
+    if (response.status === 401 || response.status === 403) {
+        clearAdminToken();
+        showLogin();
+        throw new Error('登录已过期，请重新登录');
+    }
+    if (!response.ok) {
+        throw new Error(data.error || `删除失败 (HTTP ${response.status})`);
+    }
+    return data;
 }
 
 async function refreshUsers() {
@@ -730,16 +753,33 @@ backBtn?.addEventListener('click', () => {
 });
 
 dictionaryTableBody?.addEventListener('click', async (event) => {
-    const btn = event.target.closest('[data-action="export-dict"]');
-    if (!btn) return;
-    const dictId = btn.dataset.dictId;
-    if (!dictId) return;
-    setStatusElement(dictionaryStatus, `正在导出 ${dictId}...`, 'info');
-    try {
-        await downloadDictionaryCsv(dictId);
-        setStatusElement(dictionaryStatus, '导出完成', 'success');
-    } catch (error) {
-        setStatusElement(dictionaryStatus, error.message || '导出失败', 'error');
+    const exportBtn = event.target.closest('[data-action="export-dict"]');
+    const deleteBtn = event.target.closest('[data-action="delete-dict"]');
+    if (exportBtn) {
+        const dictId = exportBtn.dataset.dictId;
+        if (!dictId) return;
+        setStatusElement(dictionaryStatus, `正在导出 ${dictId}...`, 'info');
+        try {
+            await downloadDictionaryCsv(dictId);
+            setStatusElement(dictionaryStatus, '导出完成', 'success');
+        } catch (error) {
+            setStatusElement(dictionaryStatus, error.message || '导出失败', 'error');
+        }
+        return;
+    }
+    if (deleteBtn) {
+        const dictId = deleteBtn.dataset.dictId;
+        if (!dictId) return;
+        const confirmed = window.confirm(`确定删除词典 ${dictId} 吗？相关书籍的默认词典将被清空。`);
+        if (!confirmed) return;
+        setStatusElement(dictionaryStatus, `正在删除 ${dictId}...`, 'info');
+        try {
+            await deleteDictionary(dictId);
+            setStatusElement(dictionaryStatus, '词典已删除', 'success');
+            await refreshDictionaries();
+        } catch (error) {
+            setStatusElement(dictionaryStatus, error.message || '删除失败', 'error');
+        }
     }
 });
 
