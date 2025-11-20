@@ -1,11 +1,14 @@
 import json
 from textwrap import dedent
-from app import app, db, Dictionary, Book, BookPage, BookChapter
 
-# --- 词典种子数据 ---
+from backend.app import create_app
+from backend.extensions import db
+from backend.models import Dictionary, Book, BookPage, BookChapter
+
+
 dictionaries_data = {
     'process_safety_dict': {
-        'name': '工艺安全词典',
+        'name': '化工安全词典',
         'data': {
             'relief': '泄压',
             'flare': '火炬',
@@ -27,18 +30,18 @@ dictionaries_data = {
     }
 }
 
-# --- 示例书籍结构 ---
+
 book_blueprints = [
     {
         'id': 'process_safety_primer',
         'title': 'Process Safety Primer',
-        'description': '面向工程师的流程安全入门读物，涵盖泄压、联锁与事故响应。',
+        'description': '供生产工程师快速回顾过程安全理念，含泄压、火炬、应急等',
         'defaultDictionaryId': 'process_safety_dict',
         'origin': 'default',
         'chapters': [
             {
                 'title': 'Chapter 1 · Relief Philosophy',
-                'summary': '介绍连续工艺中的泄压需求与常见排放路径。',
+                'summary': '介绍泄压设计的常见场景与路径',
                 'pages': [
                     dedent('''
                     <h3>Designing Reliable Relief Systems</h3>
@@ -54,7 +57,7 @@ book_blueprints = [
             },
             {
                 'title': 'Chapter 2 · Instrumented Protection',
-                'summary': '讨论安全仪表功能、联锁分级与测试策略。',
+                'summary': '安全仪表等级、逻辑、测试与治理',
                 'pages': [
                     dedent('''
                     <h3>Understanding Safety Instrumented Functions</h3>
@@ -70,7 +73,7 @@ book_blueprints = [
             },
             {
                 'title': 'Chapter 3 · Emergency Response',
-                'summary': '覆盖事故识别、扩散建模与应急恢复。',
+                'summary': '事件识别、扩散、应急响应',
                 'pages': [
                     dedent('''
                     <h3>From Detection to Mitigation</h3>
@@ -94,8 +97,6 @@ def seed_database():
         for dict_id, payload in dictionaries_data.items():
             db.session.add(Dictionary(id=dict_id, name=payload['name'], data=json.dumps(payload['data'])))
         db.session.commit()
-    else:
-        print('--- 词典已存在，跳过插入 ---')
 
     if Book.query.count() == 0:
         for book_data in book_blueprints:
@@ -130,12 +131,11 @@ def seed_database():
                     ))
                     page_counter += 1
         db.session.commit()
-    else:
-        print('--- 书籍已存在，跳过插入 ---')
 
 
 if __name__ == '__main__':
+    app = create_app()
     with app.app_context():
         db.create_all()
         seed_database()
-        print('--- 示例数据准备完毕 ---')
+        print('--- 例子数据已准备 ---')
