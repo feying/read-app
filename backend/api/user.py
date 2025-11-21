@@ -25,6 +25,7 @@ def serialize_user(user: User) -> dict:
         'current_page': user.current_page,
         'reading_progress': user.reading_progress,
         'username_updated_at': user.username_updated_at.isoformat() if user.username_updated_at else None,
+        'is_suspended': getattr(user, 'is_suspended', False),
     }
 
 
@@ -34,6 +35,8 @@ def get_current_user():
     user = User.query.get(int(get_jwt_identity()))
     if not user:
         return jsonify({'error': '用户不存在'}), 404
+    if getattr(user, 'is_suspended', False):
+        return jsonify({'error': '账户已被暂停'}), 403
     return jsonify({'user': serialize_user(user)}), 200
 
 
@@ -77,6 +80,8 @@ def login():
     user = User.query.filter_by(email=email).first()
     if not user or not user.check_password(password):
         return jsonify({'error': '邮箱或密码错误'}), 401
+    if getattr(user, 'is_suspended', False):
+        return jsonify({'error': '账户已被暂停，请联系管理员'}), 403
 
     token = create_access_token(identity=str(user.id))
     return jsonify({
@@ -97,6 +102,8 @@ def update_username():
     user = User.query.get(int(get_jwt_identity()))
     if not user:
         return jsonify({'error': '用户不存在'}), 404
+    if getattr(user, 'is_suspended', False):
+        return jsonify({'error': '账户已被暂停，无法修改用户名'}), 403
 
     now = datetime.utcnow()
     if user.username_updated_at:
@@ -124,6 +131,8 @@ def update_api_key():
     user = User.query.get(int(get_jwt_identity()))
     if not user:
         return jsonify({'error': '用户不存在'}), 404
+    if getattr(user, 'is_suspended', False):
+        return jsonify({'error': '账户已被暂停，无法更新密钥'}), 403
 
     user.api_key = api_key
     db.session.commit()
@@ -144,6 +153,8 @@ def update_progress():
     user = User.query.get(int(get_jwt_identity()))
     if not user:
         return jsonify({'error': '用户不存在'}), 404
+    if getattr(user, 'is_suspended', False):
+        return jsonify({'error': '账户已被暂停，无法更新进度'}), 403
 
     user.current_book_id = book_id
     try:
@@ -169,6 +180,8 @@ def get_progress(user_id: int):
     user = User.query.get(current_user_id)
     if not user:
         return jsonify({'error': '用户不存在'}), 404
+    if getattr(user, 'is_suspended', False):
+        return jsonify({'error': '账户已被暂停'}), 403
 
     return jsonify({
         'current_book_id': user.current_book_id,

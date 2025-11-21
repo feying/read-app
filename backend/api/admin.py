@@ -19,6 +19,17 @@ from backend.services.pdf_import import extract_pdf_pages, save_base64_images, r
 from backend.services.dictionary_csv import parse_dictionary_csv, build_dictionary_csv
 
 
+def serialize_admin_user(user: User) -> dict:
+    return {
+        'id': user.id,
+        'email': user.email,
+        'user_name': getattr(user, 'user_name', None),
+        'currentBookId': user.current_book_id,
+        'currentPage': user.current_page,
+        'isSuspended': getattr(user, 'is_suspended', False),
+    }
+
+
 def admin_required(fn):
     from functools import wraps
 
@@ -586,15 +597,61 @@ def admin_delete_dictionary(dict_id: str):
     return jsonify({'message': '词典已删除', 'dictionary_id': dict_id}), 200
 
 
+@admin_bp.delete('/users/<int:user_id>')
+@admin_required
+def admin_delete_user(user_id: int):
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': '用户不存在'}), 404
+    try:
+        db.session.delete(user)
+        db.session.commit()
+    except Exception:  # noqa: BLE001
+        db.session.rollback()
+        current_app.logger.exception('Admin delete user failed')
+        return jsonify({'error': '删除用户失败'}), 500
+    return jsonify({'message': '用户已删除', 'userId': user_id}), 200
+
+
+@admin_bp.post('/users/<int:user_id>/suspend')
+@admin_required
+def admin_suspend_user(user_id: int):
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': '用户不存在'}), 404
+    if getattr(user, 'is_suspended', False):
+        return jsonify({'message': '用户已处于暂停状态', 'user': serialize_admin_user(user)}), 200
+    user.is_suspended = True
+    try:
+        db.session.commit()
+    except Exception:  # noqa: BLE001
+        db.session.rollback()
+        current_app.logger.exception('Admin suspend user failed')
+        return jsonify({'error': '暂停用户失败'}), 500
+    return jsonify({'message': '用户已暂停并将被强制退出', 'user': serialize_admin_user(user)}), 200
+
+
+@admin_bp.post('/users/<int:user_id>/unsuspend')
+@admin_required
+def admin_unsuspend_user(user_id: int):
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': '用户不存在'}), 404
+    if not getattr(user, 'is_suspended', False):
+        return jsonify({'message': '用户已是正常状态', 'user': serialize_admin_user(user)}), 200
+    user.is_suspended = False
+    try:
+        db.session.commit()
+    except Exception:  # noqa: BLE001
+        db.session.rollback()
+        current_app.logger.exception('Admin unsuspend user failed')
+        return jsonify({'error': '解除暂停失败'}), 500
+    return jsonify({'message': '用户已恢复正常，可重新登录', 'user': serialize_admin_user(user)}), 200
+
+
 @admin_bp.get('/users')
 @admin_required
 def admin_list_users():
     users = User.query.order_by(User.id.asc()).all()
-    items = [{
-        'id': user.id,
-        'email': user.email,
-        'user_name': getattr(user, 'user_name', None),
-        'currentBookId': user.current_book_id,
-        'currentPage': user.current_page
-    } for user in users]
+    items = [serialize_admin_user(user) for user in users]
     return jsonify({'items': items}), 200

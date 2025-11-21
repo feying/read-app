@@ -282,11 +282,30 @@
                     <div class="flex items-center justify-between mb-3">
                         <div>
                             <h3 class="text-lg font-semibold text-gray-800">用户管理</h3>
-                            <p class="text-xs text-gray-500">查看注册用户及阅读进度</p>
+                            <p class="text-xs text-gray-500">查看用户信息，支持暂停/恢复/删除</p>
+                            <p id="admin-user-status" class="text-xs text-gray-500 mt-1"></p>
                         </div>
                         <button id="refresh-users" class="text-sm text-blue-600 hover:text-blue-500">刷新</button>
                     </div>
-                    <pre id="admin-users" class="flex-1 bg-gray-50 rounded-md p-3 text-xs overflow-auto min-h-[200px]"></pre>
+                    <div class="overflow-x-auto border border-gray-200 rounded-md">
+                        <table class="min-w-full text-left text-sm text-gray-800">
+                            <thead class="bg-gray-100 text-xs font-semibold uppercase tracking-wide text-gray-600">
+                                <tr>
+                                    <th class="px-4 py-3">ID</th>
+                                    <th class="px-4 py-3">用户名</th>
+                                    <th class="px-4 py-3">邮箱</th>
+                                    <th class="px-4 py-3">当前书/页</th>
+                                    <th class="px-4 py-3 text-center">状态</th>
+                                    <th class="px-4 py-3 text-right">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-user-table-body" class="divide-y divide-gray-100">
+                                <tr>
+                                    <td colspan="6" class="px-4 py-3 text-sm text-gray-500 text-center">等待加载...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </section>
             </main>
         </div>

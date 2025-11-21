@@ -20,7 +20,8 @@ const dictionaryCreateIdInput = document.getElementById('dictionary-create-id');
 const dictionaryCreateNameInput = document.getElementById('dictionary-create-name');
 const dictionaryCreateFileInput = document.getElementById('dictionary-create-file');
 const dictionaryCreateStatus = document.getElementById('dictionary-create-status');
-const usersOutput = document.getElementById('admin-users');
+const userTableBody = document.getElementById('admin-user-table-body');
+const userStatus = document.getElementById('admin-user-status');
 const refreshBooksBtn = document.getElementById('refresh-books');
 const refreshDictionariesBtn = document.getElementById('refresh-dictionaries');
 const refreshUsersBtn = document.getElementById('refresh-users');
@@ -601,13 +602,127 @@ async function deleteDictionary(dictId) {
 }
 
 async function refreshUsers() {
-    usersOutput.textContent = 'Loading...';
+    setStatusElement(userStatus, '正在加载用户...', 'info');
+    if (userTableBody) {
+        userTableBody.innerHTML = `
+            <tr>
+                <td colspan="6" class="px-4 py-3 text-sm text-gray-500 text-center">加载中...</td>
+            </tr>
+        `;
+    }
     try {
         const data = await fetchAdminResource('/users');
-        usersOutput.textContent = JSON.stringify(data.items, null, 2);
+        renderUserList(data.items || []);
+        setStatusElement(userStatus, `共 ${data.items?.length ?? 0} 位用户`, 'success');
     } catch (error) {
-        usersOutput.textContent = error.message;
+        setStatusElement(userStatus, error.message || '加载用户失败', 'error');
+        if (userTableBody) {
+            userTableBody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="px-4 py-3 text-sm text-red-500 text-center">${escapeHtml(error.message || '加载失败')}</td>
+                </tr>
+            `;
+        }
     }
+}
+
+function renderUserList(items = []) {
+    if (!userTableBody) return;
+    if (!items.length) {
+        userTableBody.innerHTML = `
+            <tr>
+                <td colspan="6" class="px-4 py-3 text-sm text-gray-500 text-center">暂无用户</td>
+            </tr>
+        `;
+        return;
+    }
+
+    const rows = items.map((user, index) => {
+        const safeId = escapeHtml(user?.id ?? '');
+        const safeName = escapeHtml(user?.user_name || '-');
+        const safeEmail = escapeHtml(user?.email || '-');
+        const safeBook = escapeHtml(user?.currentBookId || '-');
+        const safePage = typeof user?.currentPage === 'number' ? user.currentPage : '-';
+        const isSuspended = !!user?.isSuspended;
+        const rowStripe = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+
+        const statusBadge = isSuspended
+            ? '<span class="inline-flex items-center px-2 py-1 text-xs font-semibold text-red-600 bg-red-50 rounded-full">已暂停</span>'
+            : '<span class="inline-flex items-center px-2 py-1 text-xs font-semibold text-green-700 bg-green-50 rounded-full">正常</span>';
+
+        const actionButtons = `
+            <div class="flex items-center justify-end gap-2">
+                ${isSuspended
+                    ? `<button data-action="unsuspend-user" data-user-id="${safeId}" class="text-xs text-green-700 hover:text-green-600">解除暂停</button>`
+                    : `<button data-action="suspend-user" data-user-id="${safeId}" class="text-xs text-yellow-700 hover:text-yellow-600">暂停</button>`}
+                <button data-action="delete-user" data-user-id="${safeId}" class="text-xs text-red-600 hover:text-red-500">删除</button>
+            </div>
+        `;
+
+        return `
+            <tr class="${rowStripe}">
+                <td class="px-4 py-3 text-sm font-mono text-gray-700">${safeId}</td>
+                <td class="px-4 py-3 text-sm text-gray-800">${safeName}</td>
+                <td class="px-4 py-3 text-sm text-gray-700 break-all">${safeEmail}</td>
+                <td class="px-4 py-3 text-sm text-gray-700"> ${safeBook} / ${safePage}</td>
+                <td class="px-4 py-3 text-center">${statusBadge}</td>
+                <td class="px-4 py-3">${actionButtons}</td>
+            </tr>
+        `;
+    }).join('');
+
+    userTableBody.innerHTML = rows;
+}
+
+async function adminSuspendUser(userId) {
+    const response = await fetch(`${API_BASE}/users/${encodeURIComponent(userId)}/suspend`, {
+        method: 'POST',
+        headers: authHeaders()
+    });
+    const data = await response.json().catch(() => ({}));
+    if (response.status === 401 || response.status === 403) {
+        clearAdminToken();
+        showLogin();
+        throw new Error('登录已过期，请重新登录');
+    }
+    if (!response.ok) {
+        throw new Error(data.error || `暂停失败 (HTTP ${response.status})`);
+    }
+    return data;
+}
+
+async function adminUnsuspendUser(userId) {
+    const response = await fetch(`${API_BASE}/users/${encodeURIComponent(userId)}/unsuspend`, {
+        method: 'POST',
+        headers: authHeaders()
+    });
+    const data = await response.json().catch(() => ({}));
+    if (response.status === 401 || response.status === 403) {
+        clearAdminToken();
+        showLogin();
+        throw new Error('登录已过期，请重新登录');
+    }
+    if (!response.ok) {
+        throw new Error(data.error || `解除暂停失败 (HTTP ${response.status})`);
+    }
+    return data;
+}
+
+async function adminDeleteUser(userId) {
+    const response = await fetch(`${API_BASE}/users/${encodeURIComponent(userId)}`, {
+        method: 'DELETE',
+        headers: authHeaders()
+    });
+    const data = await response.json().catch(() => ({}));
+    if (response.status === 401 || response.status === 403) {
+        clearAdminToken();
+        showLogin();
+        throw new Error('登录已过期，请重新登录');
+    }
+    if (!response.ok) {
+        throw new Error(data.error || `删除失败 (HTTP ${response.status})`);
+    }
+    return data;
 }
 
 function toggleSidebar(show) {
@@ -708,7 +823,7 @@ async function showPanel(panelName) {
         const message = error?.message || '加载失败';
         if (panelName === 'books' && booksOutput) booksOutput.textContent = message;
         if (panelName === 'dictionaries') setStatusElement(dictionaryStatus, message, 'error');
-        if (panelName === 'users' && usersOutput) usersOutput.textContent = message;
+        if (panelName === 'users') setStatusElement(userStatus, message, 'error');
         console.warn('showPanel error:', error);
     }
 }
@@ -780,6 +895,43 @@ dictionaryTableBody?.addEventListener('click', async (event) => {
         } catch (error) {
             setStatusElement(dictionaryStatus, error.message || '删除失败', 'error');
         }
+    }
+});
+
+userTableBody?.addEventListener('click', async (event) => {
+    const suspendBtn = event.target.closest('[data-action="suspend-user"]');
+    const unsuspendBtn = event.target.closest('[data-action="unsuspend-user"]');
+    const deleteBtn = event.target.closest('[data-action="delete-user"]');
+    const targetBtn = suspendBtn || unsuspendBtn || deleteBtn;
+    if (!targetBtn) return;
+    const userId = targetBtn.dataset.userId;
+    if (!userId) return;
+
+    const originalText = targetBtn.textContent;
+    targetBtn.disabled = true;
+    targetBtn.textContent = '...';
+    try {
+        if (suspendBtn) {
+            const confirmed = window.confirm('确认暂停该用户并强制退出？');
+            if (!confirmed) return;
+            await adminSuspendUser(userId);
+            setStatusElement(userStatus, '用户已暂停', 'success');
+        } else if (unsuspendBtn) {
+            await adminUnsuspendUser(userId);
+            setStatusElement(userStatus, '用户已恢复', 'success');
+        } else if (deleteBtn) {
+            const confirmed = window.confirm('确认删除该用户？此操作不可恢复');
+            if (!confirmed) return;
+            await adminDeleteUser(userId);
+            setStatusElement(userStatus, '用户已删除', 'success');
+        }
+        await refreshUsers();
+    } catch (error) {
+        alert(error.message || '操作失败');
+        setStatusElement(userStatus, error.message || '操作失败', 'error');
+    } finally {
+        targetBtn.disabled = false;
+        targetBtn.textContent = originalText;
     }
 });
 
