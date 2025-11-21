@@ -1,10 +1,10 @@
 // --- \u5bfc\u5165\u6240\u6709\u6a21\u5757 ---
 import { callDeepSeekAPI, parsePageRange, parseContent } from './utils.js';
-import { 
-    registerUser, 
-    loginUser, 
-    updateUserApiKey, 
-    updateReadingProgress, 
+import {
+    registerUser,
+    loginUser,
+    updateUserApiKey,
+    updateReadingProgress,
     getReadingProgress,
     getLibrary,
     getDictionaries,
@@ -31,23 +31,6 @@ let allDictionaries = {};
 let allLibraryData = {};
 let bookPageCache = {};
 let bookPageOrders = {}; // bookId -> sorted array of available page numbers
-
-// --- DOM 元素引用 ---
-let contentDiv, userBtn, userModal, closeModalBtn, libraryBtn, libraryModal, closeLibraryModalBtn, libraryList;
-let apiKeyInput, saveKeyBtn, saveStatusEl, logoutBtn, paginationControls, printBtn, printModal;
-let userUsernameDisplay, userUsernameEditBtn, userUsernameEditContainer, userUsernameInput, userUsernameSaveBtn, userUsernameCancelBtn, userUsernameStatus;
-let closePrintModalBtn, confirmPrintBtn, clearProgressBtn, aiModal, closeAiModalBtn, aiModalTitle;
-let aiModalLoader, aiResponseEl;
-let loginModal, closeLoginModalBtn, loginForm, loginEmail, loginPassword, loginError;
-let registerModal, closeRegisterModalBtn, registerForm, registerEmail, registerUsername, registerPassword, confirmPassword, registerError;
-let showRegisterBtn, showLoginBtn;
-let userEmailDisplay;
-let tocBtn, tocModal, closeTocModalBtn, tocList;
-let searchBtn, searchModal, closeSearchModalBtn, searchForm, searchInput, searchStatusEl, searchResultsContainer;
-let mainContainer; // 新增：主内容容器引用
-
-// --- \u8fdb\u5ea6\u7ba1\u7406 ---
-// (\u8fd9\u90e8\u5206\u51fd\u6570 getProgressKey, saveProgress, loadProgress, applyProgress \u4fdd\u6301\u4e0d\u53d8)
 
 function updateUserEmailDisplay() {
     if (!userEmailDisplay) {
@@ -93,8 +76,14 @@ function handleUnauthorizedState(message = '登录已过期，请重新登录') 
         contentDiv.innerHTML = '';
     }
     if (loginError) loginError.textContent = message;
-    if (mainContainer) mainContainer.classList.add('hidden');
-    [userModal, libraryModal, printModal, aiModal, tocModal, searchModal].forEach(modal => modal && modal.classList.add('hidden'));
+    if (loginError) loginError.textContent = message;
+
+    // Reset View
+    if (mainContainer) mainContainer.classList.remove('hidden'); // Ensure main container is visible
+    showLibrary(); // Switch to library view
+
+    [userModal, printModal, aiModal, tocModal, searchModal].forEach(modal => modal && modal.classList.add('hidden'));
+
     if (searchStatusEl) searchStatusEl.textContent = '';
     if (searchResultsContainer) searchResultsContainer.innerHTML = '';
     if (searchInput) searchInput.value = '';
@@ -177,16 +166,16 @@ async function attemptAutoLogin() {
     }
 }
 
-function getProgressKey() { 
-    return currentUser ? 
-        `reading_progress_${currentUser.email}_${currentBookId}` : 
+function getProgressKey() {
+    return currentUser ?
+        `reading_progress_${currentUser.email}_${currentBookId}` :
         `reading_progress_anonymous_${currentBookId}`;
 }
 
 function saveProgress() {
     if (!currentBookId) return;
     let fullProgress = JSON.parse(localStorage.getItem(getProgressKey()) || '{}');
-    
+
     const wordsOnPage = document.querySelectorAll('.word-container .word');
     wordsOnPage.forEach(wordEl => {
         const wordId = wordEl.dataset.wordId;
@@ -201,14 +190,14 @@ function saveProgress() {
             delete fullProgress[wordId];
         }
     });
-    
+
     localStorage.setItem(getProgressKey(), JSON.stringify(fullProgress));
-    
+
     if (currentUser && currentBookId) {
         updateReadingProgress(
-            currentUser.id, 
-            currentBookId, 
-            currentPage, 
+            currentUser.id,
+            currentBookId,
+            currentPage,
             JSON.stringify(fullProgress)
         ).then(result => {
             if (result.unauthorized) {
@@ -220,7 +209,7 @@ function saveProgress() {
 
 function loadProgress() {
     if (!currentBookId) return;
-    
+
     if (currentUser) {
         getReadingProgress(currentUser.id).then(result => {
             if (result.unauthorized) {
@@ -374,7 +363,7 @@ function renderPaginationControls() {
     nextButton.addEventListener('click', () => {
         if (currentIdx < totalPages - 1) loadPage(order[currentIdx + 1]);
     });
-    
+
     paginationControls.append(prevButton, pageIndicator, nextButton);
 }
 
@@ -406,30 +395,65 @@ async function loadPage(pageNumber) {
     renderPaginationControls();
 }
 
-function populateLibraryModal() {
+function renderLibraryDashboard() {
+    if (!libraryList) return;
     libraryList.innerHTML = '';
     const bookIds = Object.keys(allLibraryData);
+
     if (bookIds.length === 0) {
-        libraryList.innerHTML = '<p class="text-sm text-gray-500">暂无可选书籍。</p>';
+        libraryList.innerHTML = `
+            <div class="col-span-full text-center py-12">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
+                    <svg class="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                </div>
+                <h3 class="text-lg font-medium text-gray-900">暂无书籍</h3>
+                <p class="mt-1 text-sm text-gray-500">您的书库是空的。</p>
+            </div>
+        `;
         return;
     }
+
     for (const bookId of bookIds) {
         const book = allLibraryData[bookId];
         const totalPages = (book && book.pageCount) || 0;
         const chapterCount = (book && book.chapters ? book.chapters.length : 0);
-        const itemContainer = document.createElement('div');
-        itemContainer.className = 'p-4 border rounded-md flex justify-between items-start';
-        const bookInfo = document.createElement('div');
-        bookInfo.innerHTML = `
-            <h4 class="font-bold">${book.title}</h4>
-            <p class="text-sm text-gray-600 mb-1">${book.description || '暂无简介'}</p>
-            <p class="text-xs text-gray-500">${totalPages} 页 · ${chapterCount} 章节</p>
+
+        const card = document.createElement('div');
+        card.className = 'bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden flex flex-col group cursor-pointer';
+
+        // Card Content
+        card.innerHTML = `
+            <div class="p-5 flex-1">
+                <div class="flex items-start justify-between mb-2">
+                    <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 mb-3 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                        </svg>
+                    </div>
+                </div>
+                <h4 class="text-lg font-bold text-gray-900 mb-1 line-clamp-1" title="${book.title}">${book.title}</h4>
+                <p class="text-sm text-gray-500 line-clamp-2 h-10 mb-4">${book.description || '暂无简介'}</p>
+                <div class="flex items-center text-xs text-gray-400 space-x-3">
+                    <span class="flex items-center"><svg class="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg> ${totalPages} 页</span>
+                    <span class="flex items-center"><svg class="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" /></svg> ${chapterCount} 章</span>
+                </div>
+            </div>
+            <div class="bg-gray-50 px-5 py-3 border-t border-gray-100 flex items-center justify-between">
+                <div class="flex-1 mr-3">
+                     <select id="dict-select-${bookId}" class="w-full text-xs border-none bg-transparent focus:ring-0 text-gray-600 cursor-pointer hover:text-blue-600" onclick="event.stopPropagation()">
+                        <!-- Options injected below -->
+                    </select>
+                </div>
+                <button class="text-blue-600 font-medium text-sm hover:text-blue-800 flex items-center transition-colors">
+                    阅读 <svg class="w-4 h-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                </button>
+            </div>
         `;
-        const controls = document.createElement('div');
-        controls.className = 'flex flex-col items-end space-y-2';
-        const dictSelect = document.createElement('select');
-        dictSelect.className = 'border border-gray-300 rounded-md px-2 py-1 text-xs';
-        dictSelect.id = `dict-select-${bookId}`;
+
+        // Populate Dictionary Select
+        const dictSelect = card.querySelector(`#dict-select-${bookId}`);
         for (const dictId in allDictionaries) {
             const option = document.createElement('option');
             option.value = dictId;
@@ -438,18 +462,18 @@ function populateLibraryModal() {
         }
         const savedDictId = localStorage.getItem(`selected_dictionary_for_${bookId}`) || book.defaultDictionaryId;
         dictSelect.value = savedDictId;
-        const readButton = document.createElement('button');
-        readButton.className = 'bg-blue-600 text-white px-3 py-1 rounded-md text-sm hover:bg-blue-700 whitespace-nowrap';
-        readButton.textContent = '阅读';
-        readButton.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            const selectedDictId = document.getElementById(`dict-select-${bookId}`).value;
+
+        // Click event for the whole card to open book
+        card.addEventListener('click', async () => {
+            const selectedDictId = dictSelect.value;
             localStorage.setItem(`selected_dictionary_for_${bookId}`, selectedDictId);
             await loadBook(bookId, selectedDictId);
         });
-        controls.append(dictSelect, readButton);
-        itemContainer.append(bookInfo, controls);
-        libraryList.appendChild(itemContainer);
+
+        // Prevent select click from triggering card click (handled by stopPropagation in HTML, but good to be safe)
+        dictSelect.addEventListener('click', (e) => e.stopPropagation());
+
+        libraryList.appendChild(card);
     }
 }
 
@@ -487,8 +511,7 @@ async function loadBook(bookId, dictionaryId) {
     await loadPage(pageToLoad);
 
     localStorage.setItem('lastReadBookId', bookId);
-    libraryModal.classList.add('hidden');
-    libraryModal.classList.remove('flex');
+    showReader();
 }
 
 // --- UI 辅助函数 ---
@@ -499,16 +522,12 @@ function updateSummarizeButtonsVisibility() {
     summarizeContainers.forEach(c => c.style.display = deepSeekApiKey ? 'block' : 'none');
 }
 
-function showAiModal() { 
-    aiModal.classList.remove('hidden'); 
-    aiResponseEl.textContent = ''; 
-    aiModalLoader.style.display = 'flex'; 
+function showAiModal() {
+    aiModal.classList.remove('hidden');
+    aiResponseEl.textContent = '';
 }
-
-
-// --- \u4e8b\u4ef6\u76d1\u542c\u8bbe\u7f6e ---
 function setupEventListeners() {
-    const modalTriggerButtons = [userBtn, libraryBtn, printBtn];
+    const modalTriggerButtons = [userBtn]; // libraryBtn removed
     modalTriggerButtons.forEach(btn => {
         if (!btn) return;
         btn.addEventListener('click', () => {
@@ -523,41 +542,71 @@ function setupEventListeners() {
         });
     });
 
-    const modalCloseButtons = [closeModalBtn, closeLibraryModalBtn, closePrintModalBtn, closeAiModalBtn, closeTocModalBtn, closeSearchModalBtn];
+    const modalCloseButtons = [closeModalBtn, closeAiModalBtn, closeTocModalBtn, closeSearchModalBtn];
     modalCloseButtons.forEach(btn => {
         if (!btn) return;
         btn.addEventListener('click', () => btn.closest('.fixed').classList.add('hidden'));
     });
 
-    [userModal, libraryModal, printModal, aiModal, tocModal, searchModal].forEach(modal => {
+    [userModal, aiModal, tocModal, searchModal, loginModal, registerModal].forEach(modal => {
         if (!modal) return;
         modal.addEventListener('click', e => {
             if (e.target === modal) modal.classList.add('hidden');
         });
     });
 
-    if (tocBtn) {
-        tocBtn.addEventListener('click', () => {
-            if (!currentBookId) {
-                alert('请先选择一本书籍。');
-                return;
-            }
+    // Sidebar Navigation
+    if (navLibrary) {
+        navLibrary.addEventListener('click', () => {
+            showLibrary();
+        });
+    }
+
+    if (navToc) {
+        navToc.addEventListener('click', () => {
+            if (!currentBookId) return;
             updateTocList();
             tocModal.classList.remove('hidden');
         });
     }
 
-    if (searchBtn) {
-        searchBtn.addEventListener('click', () => {
-            if (!currentBookId) {
-                alert('请先打开一本书再执行检索。');
-                return;
-            }
+    if (navSearch) {
+        navSearch.addEventListener('click', () => {
+            if (!currentBookId) return;
             if (searchInput) searchInput.value = '';
             if (searchStatusEl) searchStatusEl.textContent = '';
             if (searchResultsContainer) searchResultsContainer.innerHTML = '';
             searchModal.classList.remove('hidden');
             setTimeout(() => { if (searchInput) searchInput.focus(); }, 50);
+        });
+    }
+
+    // Sidebar Toggle (Mobile)
+    if (sidebarToggle) {
+        sidebarToggle.addEventListener('click', () => {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('-translate-x-full');
+            sidebar.classList.toggle('absolute');
+            sidebar.classList.toggle('h-full');
+        });
+    }
+
+    // Reading Settings
+    if (fontIncreaseBtn) {
+        fontIncreaseBtn.addEventListener('click', () => {
+            const content = document.getElementById('content');
+            const currentSize = parseFloat(window.getComputedStyle(content).fontSize);
+            content.style.fontSize = (currentSize + 2) + 'px';
+        });
+    }
+
+    if (fontDecreaseBtn) {
+        fontDecreaseBtn.addEventListener('click', () => {
+            const content = document.getElementById('content');
+            const currentSize = parseFloat(window.getComputedStyle(content).fontSize);
+            if (currentSize > 12) {
+                content.style.fontSize = (currentSize - 2) + 'px';
+            }
         });
     }
 
@@ -702,7 +751,7 @@ function setupEventListeners() {
         const visibleTranslations = document.querySelectorAll('#content .translation');
         visibleTranslations.forEach(el => el.remove());
         localStorage.removeItem(getProgressKey());
-        if(currentUser) {
+        if (currentUser) {
             updateReadingProgress(currentUser.id, currentBookId, currentPage, "{}").then(result => {
                 if (result.unauthorized) {
                     handleUnauthorizedState();
@@ -716,66 +765,7 @@ function setupEventListeners() {
         }, 2000);
     });
 
-    confirmPrintBtn.addEventListener('click', async () => {
-        const printContainer = document.getElementById('print-container');
-        printContainer.innerHTML = '';
-        
-        const meta = getCurrentBookMeta(); 
-        if (!meta) return;
-
-        const rangeStr = document.getElementById('print-range-input').value;
-        const pagesToPrint = parsePageRange(rangeStr, meta.pageCount || 0);
-        const printErrorEl = document.getElementById('print-error');
-
-        if (!pagesToPrint) {
-            printErrorEl.textContent = '无效的页码格式或范围。';
-            setTimeout(() => printErrorEl.textContent = '', 3000);
-            return;
-        }
-        printErrorEl.textContent = '';
-        printModal.classList.add('hidden');
-
-        const fullProgress = JSON.parse(localStorage.getItem(getProgressKey()) || '{}');
-
-        for (let index = 0; index < pagesToPrint.length; index++) {
-            const pageNumber = pagesToPrint[index];
-            try {
-                await ensurePageCached(currentBookId, pageNumber);
-            } catch (error) {
-                continue;
-            }
-            const cached = bookPageCache[currentBookId] ? bookPageCache[currentBookId][pageNumber] : undefined;
-            if (!cached) continue;
-
-            const printPageDiv = document.createElement('div');
-            printPageDiv.className = 'page bg-white p-16 text-xs leading-snug';
-            if (index < pagesToPrint.length - 1) {
-                printPageDiv.style.pageBreakAfter = 'always';
-            }
-            printPageDiv.style.boxShadow = 'none';
-
-            parseContent(printPageDiv, cached.html, true, 0, currentBookId, pageNumber);
-            
-            const wordsInPage = printPageDiv.querySelectorAll('.word');
-            wordsInPage.forEach(wordEl => {
-                const progressItem = fullProgress[wordEl.dataset.wordId];
-                if (progressItem) {
-                     const wordContainer = wordEl.parentElement;
-                     if (!wordContainer.querySelector('.translation')) {
-                         const translationSpan = document.createElement('span');
-                         translationSpan.className = 'translation';
-                         translationSpan.textContent = progressItem.translationText;
-                         if (progressItem.isEnhanced) translationSpan.classList.add('ai-enhanced');
-                         wordContainer.prepend(translationSpan);
-                     }
-                }
-            });
-            
-            printContainer.appendChild(printPageDiv);
-        }
-        
-        window.print();
-    });
+    // Removed Print Button Listener as it's not in UI anymore, but keeping function if needed later.
 
     showRegisterBtn.addEventListener('click', () => {
         loginModal.classList.add('hidden');
@@ -799,65 +789,59 @@ function setupEventListeners() {
         }
 
         loginError.textContent = '正在登录...';
-        const result = await loginUser(email, password);
-
-        if (result.success) {
-            establishSession(result.data.token, result.data.user);
-            if (currentUser.api_key) {
-                localStorage.setItem('deepseek_api_key', currentUser.api_key);
-                deepSeekApiKey = currentUser.api_key;
-                apiKeyInput.value = currentUser.api_key;
+        try {
+            const result = await loginUser(email, password);
+            if (result.success) {
+                establishSession(result.data.token, result.data.user);
+                if (currentUser.api_key) {
+                    localStorage.setItem('deepseek_api_key', currentUser.api_key);
+                    deepSeekApiKey = currentUser.api_key;
+                    apiKeyInput.value = currentUser.api_key;
+                }
+                loginError.textContent = '登录成功！正在加载数据...';
+                loginModal.classList.add('hidden');
+                loginModal.classList.remove('flex');
+                await loadDataAndShowApp();
+            } else {
+                loginError.textContent = result.error || '登录失败';
             }
-            loginError.textContent = '登录成功！正在加载数据...';
-            await loadDataAndShowApp();
-            loginModal.classList.add('hidden');
-        } else if (result.unauthorized) {
-            handleUnauthorizedState(result.data.error || '登录失效，请重试');
-        } else {
-            loginError.textContent = result.data.error || '登录失败';
+        } catch (error) {
+            console.error('登录请求错误:', error);
+            loginError.textContent = '网络错误，请稍后再试';
         }
     });
 
-    // 注册表单提交
-    // 注册表单提交
-    // 注册表单提交
     // 注册表单提交
     registerForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const email = registerEmail.value.trim();
-        const userName = registerUsername.value.trim();
+        const username = registerUsername.value.trim();
         const password = registerPassword.value;
         const confirm = confirmPassword.value;
 
-        if (!email || !password || !confirm || !userName) {
-            registerError.textContent = 'Please fill email, username and password';
-            return;
-        }
         if (password !== confirm) {
-            registerError.textContent = 'Passwords do not match';
-            return;
-        }
-        if (password.length < 6) {
-            registerError.textContent = 'Password must be at least 6 characters';
+            registerError.textContent = '两次输入的密码不一致';
             return;
         }
 
-        registerError.textContent = 'Registering...';
-        const result = await registerUser(email, password, userName);
-
-        if (result.success) {
-            registerError.textContent = 'Registered! Initializing...';
-            establishSession(result.data.token, result.data.user);
-            await loadDataAndShowApp();
-            registerModal.classList.add('hidden');
-        } else if (result.unauthorized) {
-            handleUnauthorizedState(result.data.error || 'Registered but authorization failed');
-        } else {
-            registerError.textContent = result.data.error || 'Registration failed';
+        try {
+            const result = await registerUser(email, username, password);
+            if (result.success) {
+                alert('注册成功！请登录。');
+                registerModal.classList.add('hidden');
+                loginModal.classList.remove('hidden');
+                loginModal.classList.add('flex');
+            } else {
+                registerError.textContent = result.error || '注册失败';
+            }
+        } catch (error) {
+            console.error('注册请求错误:', error);
+            registerError.textContent = '网络错误，请稍后再试';
         }
     });
 
-contentDiv.addEventListener('click', async (event) => {
+    // Word Click & Translation Logic
+    contentDiv.addEventListener('click', async (event) => {
         const target = event.target;
         if (target.classList.contains('word')) {
             const wordContainer = target.parentElement;
@@ -865,16 +849,16 @@ contentDiv.addEventListener('click', async (event) => {
                 wordContainer.querySelector('.translation').remove();
             } else {
                 const wordText = target.textContent.trim();
-                const normalizedWord = wordText.toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g,"");
+                const normalizedWord = wordText.toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
                 const staticTranslation = activeDictionary[normalizedWord];
                 const translationSpan = document.createElement('span');
                 translationSpan.className = 'translation';
-                translationSpan.textContent = staticTranslation || '\u672a\u627e\u5230';
+                translationSpan.textContent = staticTranslation || '未找到';
                 wordContainer.prepend(translationSpan);
             }
             saveProgress();
         }
-        
+
         const translationSpan = target.closest('.translation');
         if (translationSpan) {
             if (event.detail > 1) event.preventDefault();
@@ -883,44 +867,43 @@ contentDiv.addEventListener('click', async (event) => {
             const contextNode = translationSpan.closest('p, td, h3, h4, h5, h6');
             const context = contextNode ? contextNode.textContent.trim().replace(/\s+/g, ' ') : '';
 
-            if (event.detail === 2) { // \u53cc\u51fb
+            if (event.detail === 2) { // 双击
                 const originalText = translationSpan.textContent;
                 translationSpan.textContent = '...';
-                const translationText = await callDeepSeekAPI(`\u8bf7\u6839\u636e\u4e0a\u4e0b\u6587\uff0c\u5c06\u5355\u8bcd "${wordText}" \u7ffb\u8bd1\u6210\u6700\u5408\u9002\u7684\u4e2d\u6587\u3002\u53ea\u8fd4\u56de\u7ffb\u8bd1\u7ed3\u679c\u3002\n\n\u4e0a\u4e0b\u6587: "${context}"`, deepSeekApiKey);
-                if (translationText.includes('\u9519\u8bef')) {
+                const translationText = await callDeepSeekAPI(`请根据上下文，将单词 "${wordText}" 翻译成最合适的中文。只返回翻译结果。\n\n上下文: "${context}"`, deepSeekApiKey);
+                if (translationText.includes('错误')) {
                     translationSpan.textContent = originalText;
                 } else {
                     translationSpan.textContent = translationText;
                     translationSpan.classList.add('ai-enhanced');
                     saveProgress();
                 }
-            } else if (event.detail === 3) { // \u4e09\u51fb
-                aiModalTitle.textContent = `\u2728 AI \u6df1\u5ea6\u89e3\u6790: "${wordText}"`;
+            } else if (event.detail === 3) { // 三击
+                aiModalTitle.textContent = `✨ AI 深度解析: "${wordText}"`;
                 showAiModal();
-                const response = await callDeepSeekAPI(`\u8bf7\u7528\u4e2d\u6587\uff0c\u5728\u4e00\u4e2a\u6bb5\u843d\u5185\uff0c\u4e3a\u5b66\u751f\u89e3\u91ca\u6280\u672f\u672f\u8bed "${wordText}"\u3002\u8bf7\u7ed3\u5408\u4e0a\u4e0b\u6587\u89e3\u91ca\uff1a\n\n\u4e0a\u4e0b\u6587\uff1a"${context}"`, deepSeekApiKey);
+                const response = await callDeepSeekAPI(`请用中文，在一个段落内，为学生解释技术术语 "${wordText}"。请结合上下文解释：\n\n上下文："${context}"`, deepSeekApiKey);
                 aiModalLoader.style.display = 'none';
                 aiResponseEl.textContent = response;
             }
         }
 
         if (target.classList.contains('summarize-btn')) {
-             const paragraph = target.parentElement.previousElementSibling;
-             const paragraphText = paragraph ? paragraph.textContent.trim().replace(/\s+/g, ' ') : '';
-             if (paragraphText) {
-                aiModalTitle.textContent = '\u2728 AI \u6bb5\u843d\u603b\u7ed3';
+            const paragraph = target.parentElement.previousElementSibling;
+            const paragraphText = paragraph ? paragraph.textContent.trim().replace(/\s+/g, ' ') : '';
+            if (paragraphText) {
+                aiModalTitle.textContent = '✨ AI 段落总结';
                 showAiModal();
-                const response = await callDeepSeekAPI(`\u8bf7\u7528\u4e2d\u6587\uff0c\u5c06\u4ee5\u4e0b\u6bb5\u843d\u603b\u7ed3\u4e3a\u51e0\u4e2a\u5173\u952e\u70b9\uff1a\n\n\u6bb5\u843d\uff1a"${paragraphText}"`, deepSeekApiKey);
+                const response = await callDeepSeekAPI(`请用中文，将以下段落总结为几个关键点：\n\n段落："${paragraphText}"`, deepSeekApiKey);
                 aiModalLoader.style.display = 'none';
                 aiResponseEl.textContent = response;
-             }
+            }
         }
     });
 }
 
-// --- \u65b0\u589e\uff1a\u767b\u5f55\u6210\u529f\u540e\u52a0\u8f7d\u6570\u636e\u548c\u663e\u793a\u5e94\u7528\u7684\u51fd\u6570 ---
+// --- Load Data & Show App ---
 async function loadDataAndShowApp() {
     try {
-        // \u5e76\u884c\u83b7\u53d6\u4e66\u5e93\u548c\u8bcd\u5178\u6570\u636e
         [allDictionaries, allLibraryData] = await Promise.all([
             getDictionaries(),
             getLibrary()
@@ -929,11 +912,11 @@ async function loadDataAndShowApp() {
         if (error.message === 'UNAUTHORIZED') {
             handleUnauthorizedState();
         } else {
-            console.error("\u5e94\u7528\u6570\u636e\u52a0\u8f7d\u5931\u8d25:", error);
+            console.error("应用数据加载失败:", error);
             contentDiv.innerHTML = `<div class="text-red-500 p-4 border border-red-300 rounded-md">
-                <strong>\u6570\u636e\u52a0\u8f7d\u5931\u8d25</strong>
-                <p>\u65e0\u6cd5\u4ece\u540e\u7aef\u670d\u52a1\u5668\u83b7\u53d6\u4e66\u5e93\u548c\u8bcdD\u5178\u6570\u636e\u3002</p>
-                <p>\u8bf7\u786e\u4fdd\u540e\u7aef\u670d\u52a1 (python app.py) \u6b63\u5728\u8fd0\u884c\uff0c\u5e76\u4e14\u6570\u636e\u5e93\u8fde\u63a5\u6b63\u786e\u3002</p>
+                <strong>数据加载失败</strong>
+                <p>无法从后端服务器获取书库和词典数据。</p>
+                <p>请确保后端服务 (python app.py) 正在运行，并且数据库连接正确。</p>
             </div>`;
             if (mainContainer) {
                 mainContainer.classList.remove('hidden');
@@ -941,56 +924,63 @@ async function loadDataAndShowApp() {
         }
         return;
     }
-    
-    // --- \u6570\u636e\u52a0\u8f7d\u6210\u529f\u540e ---
-    populateLibraryModal();
-    updateSummarizeButtonsVisibility(); // \u786e\u4fdd AI \u6309\u94ae\u53ef\u89c1\u6027\u88ab\u8bbe\u7f6e
 
-    // \u52a0\u8f7d\u6700\u540e\u4e00\u672c\u4e66
-    const lastReadBookId = localStorage.getItem('lastReadBookId') || Object.keys(allLibraryData)[0];
-    if (lastReadBookId && allLibraryData[lastReadBookId]) {
-        const lastUsedDictId = localStorage.getItem(`selected_dictionary_for_${lastReadBookId}`) || allLibraryData[lastReadBookId].defaultDictionaryId;
-        await loadBook(lastReadBookId, lastUsedDictId);
-    } else {
-        console.warn("书库为空或找不到上一册书，请从书库选择。");
-        libraryModal.classList.remove('hidden');
-    }
-    mainContainer.classList.remove('hidden');
+    renderLibraryDashboard();
+    updateSummarizeButtonsVisibility();
+
+    showLibrary();
+
+    if (mainContainer) mainContainer.classList.remove('hidden');
 }
 
-// --- \u5e94\u7528\u521d\u59cb\u5316 (\u5df2\u91cd\u6784) ---
-function initialize() {
-    // 1. \u83b7\u53d6\u6240\u6709 DOM \u5143\u7d20\u5f15\u7528
+// --- Initialization ---
+document.addEventListener('DOMContentLoaded', async () => {
+    // Initialize DOM Elements
     contentDiv = document.getElementById('content');
     userBtn = document.getElementById('user-btn');
     userModal = document.getElementById('user-modal');
     closeModalBtn = document.getElementById('close-user-modal-btn');
-    libraryBtn = document.getElementById('library-btn');
-    libraryModal = document.getElementById('library-modal');
-    closeLibraryModalBtn = document.getElementById('close-library-modal-btn');
     libraryList = document.getElementById('library-list');
+
     apiKeyInput = document.getElementById('api-key-input');
     saveKeyBtn = document.getElementById('save-key-btn');
     saveStatusEl = document.getElementById('save-status');
     logoutBtn = document.getElementById('logout-btn');
+
     paginationControls = document.getElementById('pagination-controls');
-    printBtn = document.getElementById('print-btn');
-    printModal = document.getElementById('print-modal');
-    closePrintModalBtn = document.getElementById('close-print-modal-btn');
-    confirmPrintBtn = document.getElementById('confirm-print-btn');
+
     clearProgressBtn = document.getElementById('clear-progress-btn');
+
     aiModal = document.getElementById('ai-modal');
     closeAiModalBtn = document.getElementById('close-modal-btn');
-    aiModalTitle = document.getElementById('modal-title');
     aiModalLoader = document.getElementById('modal-loader');
     aiResponseEl = document.getElementById('ai-response');
-    mainContainer = document.getElementById('main-container');
-    userEmailDisplay = document.getElementById('user-email-display');
-    tocBtn = document.getElementById('toc-btn');
+
+    loginModal = document.getElementById('login-modal');
+    // closeLoginModalBtn removed
+    loginForm = document.getElementById('login-form');
+    loginEmail = document.getElementById('login-email');
+    loginPassword = document.getElementById('login-password');
+    loginError = document.getElementById('login-error');
+
+    registerModal = document.getElementById('register-modal');
+    // closeRegisterModalBtn removed
+    registerForm = document.getElementById('register-form');
+    registerEmail = document.getElementById('register-email');
+    registerUsername = document.getElementById('register-username');
+    registerPassword = document.getElementById('register-password');
+    confirmPassword = document.getElementById('confirm-password');
+    registerError = document.getElementById('register-error');
+
+    showRegisterBtn = document.getElementById('show-register-btn');
+    showLoginBtn = document.getElementById('show-login-btn');
+
+    userEmailDisplay = document.getElementById('sidebar-username'); // Mapped to sidebar username
+
     tocModal = document.getElementById('toc-modal');
     closeTocModalBtn = document.getElementById('close-toc-modal-btn');
     tocList = document.getElementById('toc-list');
-    searchBtn = document.getElementById('search-btn');
+
     searchModal = document.getElementById('search-modal');
     closeSearchModalBtn = document.getElementById('close-search-modal-btn');
     searchForm = document.getElementById('search-form');
@@ -998,45 +988,22 @@ function initialize() {
     searchStatusEl = document.getElementById('search-status');
     searchResultsContainer = document.getElementById('search-results');
 
-    loginModal = document.getElementById('login-modal');
-    registerModal = document.getElementById('register-modal');
-    // \u79fb\u9664\u4e86 closeLoginModalBtn \u548c closeRegisterModalBtn \u7684\u83b7\u53d6
-    loginForm = document.getElementById('login-form');
-    registerForm = document.getElementById('register-form');
-    loginEmail = document.getElementById('login-email');
-    loginPassword = document.getElementById('login-password');
-    loginError = document.getElementById('login-error');
-    registerEmail = document.getElementById('register-email');
-    registerUsername = document.getElementById('register-username');
-    userUsernameDisplay = document.getElementById('user-username-display');
-    userUsernameEditBtn = document.getElementById('user-username-edit-btn');
-    userUsernameEditContainer = document.getElementById('user-username-edit');
-    userUsernameInput = document.getElementById('user-username-input');
-    userUsernameSaveBtn = document.getElementById('user-username-save-btn');
-    userUsernameCancelBtn = document.getElementById('user-username-cancel-btn');
-    userUsernameStatus = document.getElementById('user-username-status');
-    registerPassword = document.getElementById('register-password');
-    confirmPassword = document.getElementById('confirm-password');
-    registerError = document.getElementById('register-error');
-    showRegisterBtn = document.getElementById('show-register-btn');
-    showLoginBtn = document.getElementById('show-login-btn');
-    updateUserEmailDisplay();
-    updateUserProfileView();
+    mainContainer = document.querySelector('main');
 
-    // 2. \u521d\u59cb\u5316\u7528\u6237\u4fe1\u606f
-    document.getElementById('user-email-display').textContent = "\u672a\u767b\u5f55";
-    const savedApiKey = localStorage.getItem('deepseek_api_key');
-    if (savedApiKey) {
-        deepSeekApiKey = savedApiKey;
-        apiKeyInput.value = savedApiKey;
-    }
-    
-    // 3. \u7ed1\u5b9a\u6240\u6709\u4e8b\u4ef6\u76d1\u542c\u5668\uff08\u8fd9\u6837\u767b\u5f55\u6846\u624d\u80fd\u5de5\u4f5c\uff09
+    // New View Elements
+    viewLibrary = document.getElementById('view-library');
+    viewReader = document.getElementById('view-reader');
+    navLibrary = document.getElementById('nav-library');
+    navToc = document.getElementById('nav-toc');
+    navSearch = document.getElementById('nav-search');
+    sidebarToggle = document.getElementById('sidebar-toggle');
+    readingSettings = document.getElementById('reading-settings');
+    fontIncreaseBtn = document.getElementById('font-increase');
+    fontDecreaseBtn = document.getElementById('font-decrease');
+
     setupEventListeners();
 
-    // 4. \u5c1d\u8bd5\u6062\u590d\u767b\u5f55\u72b6\u6001
-    attemptAutoLogin();
-}
-
-// --- \u542f\u52a8\u5e94\u7528 ---
-document.addEventListener('DOMContentLoaded', initialize);
+    // Initial State
+    showLibrary();
+    await attemptAutoLogin();
+});

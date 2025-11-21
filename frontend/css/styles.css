@@ -1,201 +1,65 @@
-/* Base typography fully taken from .temp/MinerU/CSS-1.html */
+/* Base typography */
 html {
     color: #1a1a1a;
-    background-color: #fdfdfd;
+    background-color: #f9fafb;
+    /* gray-50 */
 }
+
 body {
     margin: 0;
-    padding-left: 50px;
-    padding-right: 50px;
-    padding-top: 50px;
-    padding-bottom: 50px;
-    display: flex;
-    justify-content: center;
+    padding: 0;
     width: 100%;
-    hyphens: auto;
-    overflow-wrap: break-word;
+    height: 100vh;
+    overflow: hidden;
     text-rendering: optimizeLegibility;
     font-kerning: normal;
 }
 
+/* Custom Scrollbar for Sidebar and Content */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #e5e7eb;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #d1d5db;
+}
+
+/* Navigation Active State */
+.active-nav-item {
+    background-color: #eff6ff;
+    /* blue-50 */
+    color: #2563eb;
+    /* blue-600 */
+}
+
+.active-nav-item svg {
+    color: #3b82f6;
+    /* blue-500 */
+}
+
+/* Reader Content Styling */
 #content {
-    /* 隔离 Tailwind 等全局样式，应用原 MinerU 基础排版 */
-    all: revert;
-    font-family: "Times New Roman", serif;
-    font-size: 16px;
-    line-height: 1.6;
+    /* Restore MinerU/A4 typography but adapt to container */
+    font-family: "Noto Serif SC", "Times New Roman", serif;
+    font-size: 18px;
+    /* Slightly larger for screen reading */
+    line-height: 1.8;
     color: #1a1a1a;
-    width: 210mm;
-    max-width: 210mm;
-    min-width: 210mm;   /* 保持 A4 宽度，即使内容很少 */
-    flex: 0 0 210mm;    /* 在 flex 容器中固定宽度，避免收缩 */
-}
-@media (max-width: 600px) {
-    body {
-        font-size: 0.9em;
-        padding: 12px;
-    }
-    h1 {
-        font-size: 1.8em;
-    }
-}
-@media print {
-    html {
-        background-color: white;
-    }
-    body {
-        background-color: transparent;
-        color: black;
-        font-size: 12pt;
-    }
-    p, h2, h3 {
-        orphans: 3;
-        widows: 3;
-    }
-    h2, h3, h4 {
-        page-break-after: avoid;
-    }
-}
-p {
-    margin: 1em 0;
-}
-a {
-    color: #1a1a1a;
-}
-a:visited {
-    color: #1a1a1a;
-}
-img {
-    max-width: 100%;
-}
-svg {
-    height: auto;
-    max-width: 100%;
-}
-h1, h2, h3, h4, h5, h6 {
-    margin-top: 1.4em;
-}
-h5, h6 {
-    font-size: 1em;
-    font-style: italic;
-}
-h6 {
-    font-weight: normal;
-}
-ol, ul {
-    padding-left: 1.7em;
-    margin-top: 1em;
-}
-li > ol, li > ul {
-    margin-top: 0;
-}
-blockquote {
-    margin: 1em 0 1em 1.7em;
-    padding-left: 1em;
-    border-left: 2px solid #e6e6e6;
-    color: #606060;
-}
-code {
-    font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
-    font-size: 85%;
-    margin: 0;
-    hyphens: manual;
-}
-pre {
-    margin: 1em 0;
-    overflow: auto;
-}
-pre code {
-    padding: 0;
-    overflow: visible;
-    overflow-wrap: normal;
-}
-.sourceCode {
-    background-color: transparent;
-    overflow: visible;
-}
-hr {
-    border: none;
-    border-top: 1px solid #1a1a1a;
-    height: 1px;
-    margin: 1em 0;
-}
-table {
-    margin: 1em 0;
-    border-collapse: collapse;
     width: 100%;
-    overflow-x: auto;
-    display: block;
-    font-variant-numeric: lining-nums tabular-nums;
     max-width: 100%;
-    page-break-inside: avoid;
-}
-table caption {
-    margin-bottom: 0.75em;
-}
-tbody {
-    margin-top: 0.5em;
-    border-top: 1px solid #1a1a1a;
-    border-bottom: 1px solid #1a1a1a;
-}
-th {
-    border-top: 1px solid #1a1a1a;
-    padding: 0.25em 0.5em 0.25em 0.5em;
-    text-align: center;
-    font-weight: bold;
-    background-color: #f3f4f6;
-}
-td {
-    padding: 0.125em 0.5em 0.25em 0.5em;
-}
-table td, table th {
-    border: 1px solid #dfe2e5;
-}
-tr {
-    background-color: #fff;
-    border-top: 1px solid #c6cbd1;
-}
-tr:nth-child(2n) {
-    background-color: #f6f8fa;
-}
-header {
-    margin-bottom: 4em;
-    text-align: center;
-}
-#TOC li {
-    list-style: none;
-}
-#TOC ul {
-    padding-left: 1.3em;
-}
-#TOC > ul {
-    padding-left: 0;
-}
-#TOC a:not(:hover) {
-    text-decoration: none;
-}
-code { white-space: pre-wrap; }
-span.smallcaps { font-variant: small-caps; }
-div.columns { display: flex; gap: min(4vw, 1.5em); }
-div.column { flex: auto; overflow-x: auto; }
-div.hanging-indent { margin-left: 1.5em; text-indent: -1.5em; }
-ul.task-list[class] { list-style: none; }
-ul.task-list li input[type="checkbox"] {
-    font-size: inherit;
-    width: 0.8em;
-    margin: 0 0.8em 0.2em -1.6em;
-    vertical-align: middle;
 }
 
-/* Override Tailwind reset to restore heading emphasis */
-#content h1 { font-size: 2em; font-weight: 700; line-height: 1.4; margin: 1.2em 0 0.6em; }
-#content h2 { font-size: 1.7em; font-weight: 700; }
-#content h3 { font-size: 1.4em; font-weight: 700; }
-#content h4 { font-size: 1.2em; font-weight: 700; }
-#content h5 { font-size: 1.05em; font-weight: 700; }
-#content h6 { font-size: 1em; font-weight: 700; }
-
-/* Interactive reading: keep translation/summarize styles */
+/* Interactive Reading Elements */
 .word-container {
     display: inline-flex;
     flex-direction: column;
@@ -203,36 +67,146 @@ ul.task-list li input[type="checkbox"] {
     vertical-align: bottom;
     margin: 0;
     padding-bottom: 4px;
+    position: relative;
+    /* Ensure positioning context */
 }
+
 .word {
     cursor: pointer;
-    padding: 0 0.1px;
+    padding: 0 1px;
     border-radius: 4px;
     transition: background-color 0.2s;
 }
-.word:hover { background-color: #e0e7ff; }
+
+.word:hover {
+    background-color: #e0e7ff;
+}
+
+/* Translation Styling - Critical for preserving interaction */
 .translation {
-    font-size: 0.8em;
+    font-size: 0.75em;
     color: #3b82f6;
-    padding: 2px 4px;
+    padding: 1px 4px;
     white-space: nowrap;
     user-select: none;
     display: inline-block;
     cursor: pointer;
     border-radius: 4px;
-    transition: background-color 0.2s, color 0.2s;
+    transition: all 0.2s;
+    font-family: system-ui, -apple-system, sans-serif;
+    font-weight: 500;
 }
-.translation:hover { background-color: #eff6ff; }
-.translation.ai-enhanced { color: #8b5cf6; }
-.summarize-btn-container { display: none; text-align: right; margin-top: -0.5em; margin-bottom: 1em; }
+
+.translation:hover {
+    background-color: #eff6ff;
+}
+
+.translation.ai-enhanced {
+    color: #8b5cf6;
+}
+
+/* Summarize Button */
+.summarize-btn-container {
+    display: none;
+    text-align: right;
+    margin-top: -0.5em;
+    margin-bottom: 1em;
+}
+
 .summarize-btn {
     cursor: pointer;
     font-size: 0.8em;
     color: #4f46e5;
     background-color: #eef2ff;
-    padding: 4px 10px;
+    padding: 4px 12px;
     border-radius: 9999px;
     transition: all 0.2s ease-in-out;
     border: 1px solid transparent;
+    font-family: system-ui, sans-serif;
 }
-.summarize-btn:hover { background-color: #e0e7ff; border-color: #c7d2fe; }
+
+.summarize-btn:hover {
+    background-color: #e0e7ff;
+    border-color: #c7d2fe;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translate3d(0, 20px, 0);
+    }
+
+    to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+.animate-fade-in-up {
+    animation: fadeInUp 0.3s ease-out forwards;
+}
+
+/* Markdown Content Styling (for AI response) */
+#ai-response h1,
+#ai-response h2,
+#ai-response h3 {
+    margin-top: 1em;
+    margin-bottom: 0.5em;
+    font-weight: bold;
+}
+
+#ai-response p {
+    margin-bottom: 0.8em;
+}
+
+#ai-response ul,
+#ai-response ol {
+    margin-left: 1.5em;
+    margin-bottom: 0.8em;
+}
+
+#ai-response li {
+    margin-bottom: 0.3em;
+}
+
+#ai-response code {
+    background-color: #f3f4f6;
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.9em;
+}
+
+/* Print Styles */
+@media print {
+
+    #sidebar,
+    header,
+    #pagination-controls,
+    #reading-settings {
+        display: none !important;
+    }
+
+    #main-container,
+    #view-reader,
+    #content-area {
+        display: block !important;
+        overflow: visible !important;
+        height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    #page-container {
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    body {
+        background-color: white;
+        height: auto;
+        overflow: visible;
+    }
+}
