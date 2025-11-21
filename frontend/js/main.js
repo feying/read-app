@@ -32,13 +32,29 @@ let allLibraryData = {};
 let bookPageCache = {};
 let bookPageOrders = {}; // bookId -> sorted array of available page numbers
 
+// --- 全局 DOM 引用 ---
+let contentDiv, userBtn, userModal, closeModalBtn, libraryList;
+let apiKeyInput, saveKeyBtn, saveStatusEl, logoutBtn;
+let paginationControls, clearProgressBtn;
+let aiModal, closeAiModalBtn, aiModalLoader, aiResponseEl, aiModalTitle;
+let loginModal, loginForm, loginEmail, loginPassword, loginError;
+let registerModal, registerForm, registerEmail, registerUsername, registerPassword, confirmPassword, registerError;
+let showRegisterBtn, showLoginBtn;
+let sidebarUsernameDisplay, userEmailDisplay, userUsernameDisplay;
+let userUsernameEditBtn, userUsernameEditContainer, userUsernameInput, userUsernameSaveBtn, userUsernameCancelBtn, userUsernameStatus;
+let tocModal, closeTocModalBtn, tocList;
+let searchModal, closeSearchModalBtn, searchForm, searchInput, searchStatusEl, searchResultsContainer;
+let mainContainer, viewLibrary, viewReader, navLibrary, navToc, navSearch, sidebarToggle, pageTitle;
+let readingSettings, fontIncreaseBtn, fontDecreaseBtn;
+let printModal;
+
 function updateUserEmailDisplay() {
-    if (!userEmailDisplay) {
-        userEmailDisplay = document.getElementById('user-email-display');
+    if (!sidebarUsernameDisplay) {
+        sidebarUsernameDisplay = document.getElementById('sidebar-username');
     }
-    if (userEmailDisplay) {
+    if (sidebarUsernameDisplay) {
         const name = currentUser?.user_name || currentUser?.email || 'Not logged in';
-        userEmailDisplay.textContent = name;
+        sidebarUsernameDisplay.textContent = name;
     }
 }
 
@@ -514,6 +530,38 @@ async function loadBook(bookId, dictionaryId) {
     showReader();
 }
 
+function setActiveNav(targetBtn) {
+    [navLibrary, navToc, navSearch].forEach(btn => btn && btn.classList.remove('active-nav-item'));
+    if (targetBtn) targetBtn.classList.add('active-nav-item');
+}
+
+function showLibrary() {
+    if (viewLibrary) viewLibrary.classList.remove('hidden');
+    if (viewReader) viewReader.classList.add('hidden');
+    if (readingSettings) readingSettings.classList.add('hidden');
+    if (paginationControls) paginationControls.classList.add('hidden');
+    if (navToc) navToc.classList.add('hidden');
+    if (navSearch) navSearch.classList.add('hidden');
+    const titleEl = pageTitle || document.getElementById('page-title');
+    pageTitle = titleEl;
+    if (titleEl) titleEl.textContent = '书库';
+    setActiveNav(navLibrary);
+}
+
+function showReader() {
+    if (viewLibrary) viewLibrary.classList.add('hidden');
+    if (viewReader) viewReader.classList.remove('hidden');
+    if (readingSettings) readingSettings.classList.remove('hidden');
+    if (paginationControls) paginationControls.classList.remove('hidden');
+    if (navToc) navToc.classList.remove('hidden');
+    if (navSearch) navSearch.classList.remove('hidden');
+    const titleEl = pageTitle || document.getElementById('page-title');
+    pageTitle = titleEl;
+    const meta = getCurrentBookMeta();
+    if (titleEl) titleEl.textContent = meta?.title || '阅读';
+    setActiveNav(navLibrary);
+}
+
 // --- UI 辅助函数 ---
 // --- UI \u8f85\u52a9\u51fd\u6570 ---
 // (updateSummarizeButtonsVisibility \u548c showAiModal \u4fdd\u6301\u4e0d\u53d8)
@@ -825,7 +873,7 @@ function setupEventListeners() {
         }
 
         try {
-            const result = await registerUser(email, username, password);
+            const result = await registerUser(email, password, username);
             if (result.success) {
                 alert('注册成功！请登录。');
                 registerModal.classList.add('hidden');
@@ -975,7 +1023,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     showRegisterBtn = document.getElementById('show-register-btn');
     showLoginBtn = document.getElementById('show-login-btn');
 
-    userEmailDisplay = document.getElementById('sidebar-username'); // Mapped to sidebar username
+    sidebarUsernameDisplay = document.getElementById('sidebar-username');
+    userUsernameDisplay = document.getElementById('user-username-display');
+    userEmailDisplay = document.getElementById('user-email-display');
+    userUsernameEditBtn = document.getElementById('user-username-edit-btn');
+    userUsernameEditContainer = document.getElementById('user-username-edit');
+    userUsernameInput = document.getElementById('user-username-input');
+    userUsernameSaveBtn = document.getElementById('user-username-save-btn');
+    userUsernameCancelBtn = document.getElementById('user-username-cancel-btn');
+    userUsernameStatus = document.getElementById('user-username-status');
 
     tocModal = document.getElementById('toc-modal');
     closeTocModalBtn = document.getElementById('close-toc-modal-btn');
@@ -989,6 +1045,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     searchResultsContainer = document.getElementById('search-results');
 
     mainContainer = document.querySelector('main');
+    pageTitle = document.getElementById('page-title');
 
     // New View Elements
     viewLibrary = document.getElementById('view-library');
@@ -1000,6 +1057,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     readingSettings = document.getElementById('reading-settings');
     fontIncreaseBtn = document.getElementById('font-increase');
     fontDecreaseBtn = document.getElementById('font-decrease');
+
+    aiModalTitle = document.querySelector('#ai-modal h3');
+    printModal = document.getElementById('print-container');
 
     setupEventListeners();
 
