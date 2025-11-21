@@ -64,6 +64,7 @@ function updateUserProfileView() {
     if (userUsernameDisplay) userUsernameDisplay.textContent = name;
     if (userEmailDisplay) userEmailDisplay.textContent = currentUser?.email || '-';
     if (userUsernameInput && currentUser?.user_name) userUsernameInput.value = currentUser.user_name;
+    refreshUsernameEditUI();
 }
 
 function establishSession(token, user) {
@@ -100,6 +101,28 @@ function handleUnauthorizedState(message = '登录已过期，请重新登录') 
     if (loginModal) {
         loginModal.classList.remove('hidden');
         loginModal.classList.add('flex');
+    }
+}
+
+function canEditUsername() {
+    if (!currentUser) return false;
+    return !currentUser.username_updated_at;
+}
+
+function refreshUsernameEditUI() {
+    if (!userUsernameEditBtn || !userUsernameEditContainer) return;
+    userUsernameEditContainer.classList.add('hidden');
+    if (canEditUsername()) {
+        userUsernameEditBtn.classList.remove('hidden');
+        if (userUsernameStatus) userUsernameStatus.textContent = '';
+        if (userUsernameInput && currentUser?.user_name) {
+            userUsernameInput.value = currentUser.user_name;
+        }
+    } else {
+        userUsernameEditBtn.classList.add('hidden');
+        if (userUsernameStatus) {
+            userUsernameStatus.textContent = currentUser ? '用户名已修改，无法再次修改' : '';
+        }
     }
 }
 
@@ -564,6 +587,74 @@ function setupEventListeners() {
                     console.error('检索失败:', error);
                     searchStatusEl.textContent = '检索失败，请稍后再试';
                 }
+            }
+        });
+    }
+
+    if (userUsernameEditBtn && userUsernameEditContainer) {
+        userUsernameEditBtn.addEventListener('click', () => {
+            if (!canEditUsername()) {
+                if (userUsernameStatus) userUsernameStatus.textContent = '用户名已修改，无法再次修改';
+                return;
+            }
+            userUsernameEditBtn.classList.add('hidden');
+            if (userUsernameStatus) userUsernameStatus.textContent = '';
+            const fallbackName = currentUser?.user_name || currentUser?.email || '';
+            if (userUsernameInput) {
+                userUsernameInput.value = fallbackName;
+                userUsernameInput.focus();
+            }
+            userUsernameEditContainer.classList.remove('hidden');
+        });
+    }
+
+    if (userUsernameCancelBtn) {
+        userUsernameCancelBtn.addEventListener('click', () => {
+            userUsernameEditContainer.classList.add('hidden');
+            if (canEditUsername() && userUsernameEditBtn) {
+                userUsernameEditBtn.classList.remove('hidden');
+            }
+            if (userUsernameStatus) userUsernameStatus.textContent = '';
+        });
+    }
+
+    if (userUsernameSaveBtn) {
+        userUsernameSaveBtn.addEventListener('click', async () => {
+            if (!canEditUsername()) {
+                if (userUsernameStatus) userUsernameStatus.textContent = '用户名已修改，无法再次修改';
+                return;
+            }
+            const newName = (userUsernameInput?.value || '').trim();
+            if (!newName) {
+                if (userUsernameStatus) userUsernameStatus.textContent = '请输入用户名';
+                return;
+            }
+
+            if (userUsernameStatus) userUsernameStatus.textContent = '正在保存...';
+            userUsernameSaveBtn.disabled = true;
+            if (userUsernameCancelBtn) userUsernameCancelBtn.disabled = true;
+            try {
+                const result = await updateUsername(newName);
+                if (result.unauthorized) {
+                    handleUnauthorizedState();
+                    return;
+                }
+                if (result.success) {
+                    currentUser = result.data.user;
+                    localStorage.setItem('current_user', JSON.stringify(currentUser));
+                    updateUserProfileView();
+                    userUsernameEditContainer.classList.add('hidden');
+                    if (userUsernameEditBtn) userUsernameEditBtn.classList.add('hidden');
+                    if (userUsernameStatus) userUsernameStatus.textContent = '用户名已更新，无法再次修改';
+                } else {
+                    if (userUsernameStatus) userUsernameStatus.textContent = result.data?.error || '更新失败';
+                }
+            } catch (error) {
+                console.error('更新用户名失败:', error);
+                if (userUsernameStatus) userUsernameStatus.textContent = '更新失败，请稍后再试';
+            } finally {
+                userUsernameSaveBtn.disabled = false;
+                if (userUsernameCancelBtn) userUsernameCancelBtn.disabled = false;
             }
         });
     }
