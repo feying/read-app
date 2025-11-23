@@ -61,6 +61,110 @@ body {
     max-width: 100%;
 }
 
+/* Typography Improvements */
+#content h1 {
+    font-size: 2.25em;
+    font-weight: 700;
+    margin-top: 1.5em;
+    margin-bottom: 0.8em;
+    letter-spacing: -0.025em;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 0.3em;
+    line-height: 1.3;
+}
+
+#content h2 {
+    font-size: 1.8em;
+    font-weight: 600;
+    margin-top: 1.4em;
+    margin-bottom: 0.6em;
+    letter-spacing: -0.025em;
+    border-bottom: 1px solid #f3f4f6;
+    padding-bottom: 0.3em;
+    line-height: 1.35;
+}
+
+#content h3 {
+    font-size: 1.5em;
+    font-weight: 600;
+    margin-top: 1.2em;
+    margin-bottom: 0.5em;
+    letter-spacing: -0.02em;
+    line-height: 1.4;
+}
+
+#content h4 {
+    font-size: 1.25em;
+    font-weight: 600;
+    margin-top: 1.1em;
+    margin-bottom: 0.5em;
+    letter-spacing: -0.015em;
+}
+
+#content h5 {
+    font-size: 1.1em;
+    font-weight: 600;
+    margin-top: 1em;
+    margin-bottom: 0.5em;
+}
+
+#content h6 {
+    font-size: 1em;
+    font-weight: 600;
+    margin-top: 1em;
+    margin-bottom: 0.5em;
+    text-transform: uppercase;
+    color: #6b7280;
+    letter-spacing: 0.05em;
+}
+
+#content p {
+    margin-bottom: 1.2em;
+    text-align: justify;
+    letter-spacing: -0.01em;
+}
+
+/* Table Styling */
+#content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5em 0;
+    font-size: 0.95em;
+    display: block;
+    overflow-x: auto;
+}
+
+#content th,
+#content td {
+    border: 1px solid #e5e7eb;
+    padding: 0.75em;
+    text-align: left;
+}
+
+#content th {
+    background-color: #f9fafb;
+    font-weight: 600;
+    color: #374151;
+}
+
+#content tr:nth-child(even) {
+    background-color: #f9fafb;
+}
+
+/* Math Formula Styling */
+math {
+    font-family: "Latin Modern Math", "Cambria Math", serif;
+}
+
+.formula,
+.math-display {
+    display: block;
+    overflow-x: auto;
+    margin: 1.5em 0;
+    text-align: center;
+    padding: 1em 0;
+}
+
 /* Interactive Reading Elements */
 .word-container {
     display: inline-flex;
@@ -84,11 +188,13 @@ body {
     background-color: #e0e7ff;
 }
 
-/* Translation Styling - Critical for preserving interaction */
+/* Translation Styling - Compact & Beautified */
 .translation {
     font-size: 0.75em;
-    color: #3b82f6;
-    padding: 1px 4px;
+    color: #4b5563;
+    background-color: #f3f4f6;
+    padding: 0 4px;
+    margin: 0 2px;
     white-space: nowrap;
     user-select: none;
     display: inline-block;
@@ -97,14 +203,25 @@ body {
     transition: all 0.2s;
     font-family: system-ui, -apple-system, sans-serif;
     font-weight: 500;
+    vertical-align: 1px;
+    border: 1px solid transparent;
 }
 
 .translation:hover {
-    background-color: #eff6ff;
+    background-color: #e0e7ff;
+    color: #2563eb;
+    border-color: #bfdbfe;
 }
 
 .translation.ai-enhanced {
-    color: #8b5cf6;
+    color: #7c3aed;
+    background-color: #f5f3ff;
+}
+
+.translation.ai-enhanced:hover {
+    background-color: #ede9fe;
+    color: #6d28d9;
+    border-color: #ddd6fe;
 }
 
 /* Summarize Button */
