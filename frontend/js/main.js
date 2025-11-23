@@ -470,6 +470,8 @@ function renderLibraryDashboard() {
 
         // Populate Dictionary Select
         const dictSelect = card.querySelector(`#dict-select-${bookId}`);
+        dictSelect.setAttribute('aria-label', `选择《${book.title}》的词典`);
+        dictSelect.setAttribute('title', `选择《${book.title}》的词典`);
         for (const dictId in allDictionaries) {
             const option = document.createElement('option');
             option.value = dictId;

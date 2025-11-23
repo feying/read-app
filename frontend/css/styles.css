@@ -3,6 +3,8 @@ html {
     color: #1a1a1a;
     background-color: #f9fafb;
     /* gray-50 */
+    text-size-adjust: 100%;
+    -webkit-text-size-adjust: 100%;
 }
 
 body {
