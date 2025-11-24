@@ -45,7 +45,7 @@ let userUsernameEditBtn, userUsernameEditContainer, userUsernameInput, userUsern
 let tocModal, closeTocModalBtn, tocList;
 let searchModal, closeSearchModalBtn, searchForm, searchInput, searchStatusEl, searchResultsContainer;
 let mainContainer, viewLibrary, viewReader, navLibrary, navToc, navSearch, sidebarToggle, pageTitle;
-let readingSettings, fontIncreaseBtn, fontDecreaseBtn, printBtn;
+let readingSettings, fontIncreaseBtn, fontDecreaseBtn, printBtn, printRangeInput, printRangeBtn;
 let printModal;
 
 function updateUserEmailDisplay() {
@@ -574,6 +574,43 @@ function buildPrintableView() {
     return clone;
 }
 
+async function buildPrintablePages(pageIndexes = []) {
+    if (!printModal) return null;
+    const order = getCurrentPageOrder();
+    if (order.length === 0) return null;
+
+    let wordOffset = 0;
+    printModal.innerHTML = '';
+
+    for (const idx of pageIndexes) {
+        const pageNumber = order[idx];
+        if (pageNumber === undefined) continue;
+        await ensurePageCached(currentBookId, pageNumber);
+        const cached = bookPageCache[currentBookId]?.[pageNumber];
+        if (!cached) continue;
+
+        const pageWrapper = document.createElement('div');
+        pageWrapper.className = 'print-page';
+
+        const pageBox = document.createElement('div');
+        pageBox.className = 'print-page-container bg-white shadow-sm rounded-lg p-8 md:p-12 min-h-full text-lg leading-loose';
+
+        const contentNode = document.createElement('div');
+        pageBox.appendChild(contentNode);
+
+        wordOffset = parseContent(contentNode, cached.html, true, wordOffset, currentBookId, pageNumber);
+
+        pageWrapper.appendChild(pageBox);
+        printModal.appendChild(pageWrapper);
+
+        const pageBreak = document.createElement('div');
+        pageBreak.className = 'print-page-break';
+        printModal.appendChild(pageBreak);
+    }
+
+    return printModal.firstChild ? printModal : null;
+}
+
 function waitForImages(container) {
     const images = Array.from(container.querySelectorAll('img'));
     if (images.length === 0) return Promise.resolve();
@@ -585,20 +622,14 @@ function waitForImages(container) {
     })));
 }
 
-async function printCurrentPage() {
-    if (!currentBookId || currentPage === null) {
-        alert('请先选择要打印的图书和页码');
-        return;
-    }
-
-    const printable = buildPrintableView();
-    if (!printable) {
+async function startPrintFromIndexes(pageIndexes) {
+    const built = await buildPrintablePages(pageIndexes);
+    if (!built) {
         alert('打印内容暂时无法准备');
         return;
     }
 
     printModal.classList.remove('hidden');
-
     await waitForImages(printModal);
 
     const cleanup = () => {
@@ -610,6 +641,42 @@ async function printCurrentPage() {
     window.addEventListener('afterprint', cleanup);
     window.print();
     setTimeout(cleanup, 1500);
+}
+
+async function printCurrentPage() {
+    if (!currentBookId || currentPage === null) {
+        alert('请先选择要打印的图书和页码');
+        return;
+    }
+
+    const order = getCurrentPageOrder();
+    const idx = order.indexOf(currentPage);
+    if (idx === -1) {
+        alert('当前页面未找到，无法打印');
+        return;
+    }
+    await startPrintFromIndexes([idx]);
+}
+
+async function printRange() {
+    if (!currentBookId) {
+        alert('请先选择图书');
+        return;
+    }
+    const order = getCurrentPageOrder();
+    if (order.length === 0) {
+        alert('当前图书没有可打印的页面');
+        return;
+    }
+
+    const rangeText = (printRangeInput?.value || '').trim();
+    const rangeIndexes = parsePageRange(rangeText, order.length);
+    if (!rangeIndexes || rangeIndexes.length === 0) {
+        alert('页码范围格式不正确，例如 1-3,5');
+        return;
+    }
+
+    await startPrintFromIndexes(rangeIndexes);
 }
 
 // --- UI 辅助函数 ---
@@ -711,6 +778,12 @@ function setupEventListeners() {
     if (printBtn) {
         printBtn.addEventListener('click', () => {
             printCurrentPage();
+        });
+    }
+
+    if (printRangeBtn) {
+        printRangeBtn.addEventListener('click', () => {
+            printRange();
         });
     }
 
@@ -1113,6 +1186,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     readingSettings = document.getElementById('reading-settings');
     fontIncreaseBtn = document.getElementById('font-increase');
     fontDecreaseBtn = document.getElementById('font-decrease');
+    printRangeInput = document.getElementById('print-range-input');
+    printRangeBtn = document.getElementById('print-range-btn');
     printBtn = document.getElementById('print-btn');
 
     aiModalTitle = document.querySelector('#ai-modal h3');

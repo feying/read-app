@@ -346,6 +346,10 @@ math {
         page-break-inside: avoid;
     }
 
+    #print-container .print-page-break {
+        page-break-after: always;
+    }
+
     #print-container table {
         page-break-inside: avoid;
     }
