@@ -17,6 +17,10 @@ body {
     font-kerning: normal;
 }
 
+#print-container {
+    display: none;
+}
+
 /* Custom Scrollbar for Sidebar and Content */
 ::-webkit-scrollbar {
     width: 6px;
@@ -299,33 +303,65 @@ math {
 
 /* Print Styles */
 @media print {
+    @page {
+        size: A4;
+        margin: 12mm;
+    }
 
     #sidebar,
     header,
     #pagination-controls,
-    #reading-settings {
-        display: none !important;
-    }
-
-    #main-container,
+    #reading-settings,
+    #content-area,
     #view-reader,
-    #content-area {
-        display: block !important;
-        overflow: visible !important;
-        height: auto !important;
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-
-    #page-container {
-        box-shadow: none !important;
-        padding: 0 !important;
-        margin: 0 !important;
+    #view-library {
+        display: none !important;
     }
 
     body {
         background-color: white;
         height: auto;
         overflow: visible;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    #print-container {
+        display: block !important;
+        width: 100%;
+    }
+
+    #print-container #page-container {
+        box-shadow: none !important;
+        max-width: 210mm;
+        margin: 0 auto;
+        padding: 0;
+    }
+
+    #print-container img {
+        max-width: 100%;
+        height: auto;
+        display: block;
+        margin: 0 auto;
+        page-break-inside: avoid;
+    }
+
+    #print-container table {
+        page-break-inside: avoid;
+    }
+
+    #print-container p,
+    #print-container h1,
+    #print-container h2,
+    #print-container h3,
+    #print-container h4,
+    #print-container h5,
+    #print-container h6 {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    #print-container .summarize-btn-container {
+        display: none !important;
     }
 }

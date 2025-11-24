@@ -45,7 +45,7 @@ let userUsernameEditBtn, userUsernameEditContainer, userUsernameInput, userUsern
 let tocModal, closeTocModalBtn, tocList;
 let searchModal, closeSearchModalBtn, searchForm, searchInput, searchStatusEl, searchResultsContainer;
 let mainContainer, viewLibrary, viewReader, navLibrary, navToc, navSearch, sidebarToggle, pageTitle;
-let readingSettings, fontIncreaseBtn, fontDecreaseBtn;
+let readingSettings, fontIncreaseBtn, fontDecreaseBtn, printBtn;
 let printModal;
 
 function updateUserEmailDisplay() {
@@ -563,6 +563,54 @@ function showReader() {
     if (titleEl) titleEl.textContent = meta?.title || '阅读';
     setActiveNav(navLibrary);
 }
+function buildPrintableView() {
+    if (!printModal) return null;
+    const pageContainer = document.getElementById('page-container');
+    if (!pageContainer) return null;
+
+    const clone = pageContainer.cloneNode(true);
+    printModal.innerHTML = '';
+    printModal.appendChild(clone);
+    return clone;
+}
+
+function waitForImages(container) {
+    const images = Array.from(container.querySelectorAll('img'));
+    if (images.length === 0) return Promise.resolve();
+    return Promise.all(images.map(img => new Promise(resolve => {
+        if (img.complete && img.naturalWidth !== 0) return resolve();
+        img.loading = 'eager';
+        img.addEventListener('load', () => resolve(), { once: true });
+        img.addEventListener('error', () => resolve(), { once: true });
+    })));
+}
+
+async function printCurrentPage() {
+    if (!currentBookId || currentPage === null) {
+        alert('请先选择要打印的图书和页码');
+        return;
+    }
+
+    const printable = buildPrintableView();
+    if (!printable) {
+        alert('打印内容暂时无法准备');
+        return;
+    }
+
+    printModal.classList.remove('hidden');
+
+    await waitForImages(printModal);
+
+    const cleanup = () => {
+        printModal.innerHTML = '';
+        printModal.classList.add('hidden');
+        window.removeEventListener('afterprint', cleanup);
+    };
+
+    window.addEventListener('afterprint', cleanup);
+    window.print();
+    setTimeout(cleanup, 1500);
+}
 
 // --- UI 辅助函数 ---
 // --- UI \u8f85\u52a9\u51fd\u6570 ---
@@ -657,6 +705,12 @@ function setupEventListeners() {
             if (currentSize > 12) {
                 content.style.fontSize = (currentSize - 2) + 'px';
             }
+        });
+    }
+
+    if (printBtn) {
+        printBtn.addEventListener('click', () => {
+            printCurrentPage();
         });
     }
 
@@ -1059,6 +1113,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     readingSettings = document.getElementById('reading-settings');
     fontIncreaseBtn = document.getElementById('font-increase');
     fontDecreaseBtn = document.getElementById('font-decrease');
+    printBtn = document.getElementById('print-btn');
 
     aiModalTitle = document.querySelector('#ai-modal h3');
     printModal = document.getElementById('print-container');
